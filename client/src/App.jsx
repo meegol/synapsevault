@@ -62,19 +62,16 @@ export default function App() {
   // Fetch documents and graph data from server
   const fetchVaultData = async () => {
     try {
-      const [docsRes, graphRes, settingsRes] = await Promise.all([
+      const [docsRes, graphRes] = await Promise.all([
         apiFetch('/api/documents'),
-        apiFetch('/api/graph'),
-        apiFetch('/api/settings')
+        apiFetch('/api/graph')
       ]);
 
       const docsData = await docsRes.json();
       const graphJson = await graphRes.json();
-      const settingsJson = await settingsRes.json();
 
       setDocuments(docsData.documents || []);
       setGraphData(graphJson || { nodes: [], links: [] });
-      if (settingsJson.selectedModel) setSelectedModel(settingsJson.selectedModel);
 
       // Default select first doc if none selected
       if (!selectedDocId && docsData.documents && docsData.documents.length > 0) {

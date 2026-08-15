@@ -1,3 +1,4 @@
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { 
   ZoomIn, 
   ZoomOut, 
@@ -5,7 +6,6 @@ import {
   Play, 
   Pause, 
   Filter, 
-  Sparkles, 
   BookOpen, 
   ExternalLink, 
   Hash, 
