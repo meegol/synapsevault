@@ -4,31 +4,8 @@ import config from '../config.js';
 
 const VAULT_INDEX_FILE = path.join(config.vaultDir, 'vault_index.json');
 
-/**
- * Helper to read JSON vault index
- */
-function readVaultIndex() {
-  try {
-    if (!fs.existsSync(VAULT_INDEX_FILE)) {
-      const initialSeed = getInitialSeedData();
-      fs.writeFileSync(VAULT_INDEX_FILE, JSON.stringify(initialSeed, null, 2), 'utf-8');
-      initialSeed.forEach(doc => saveMarkdownFile(doc));
-      return initialSeed;
-    }
-    const data = fs.readFileSync(VAULT_INDEX_FILE, 'utf-8');
-    const parsed = JSON.parse(data || '[]');
-    if (parsed.length === 0) {
-      const initialSeed = getInitialSeedData();
-      fs.writeFileSync(VAULT_INDEX_FILE, JSON.stringify(initialSeed, null, 2), 'utf-8');
-      initialSeed.forEach(doc => saveMarkdownFile(doc));
-      return initialSeed;
-    }
-    return parsed;
-  } catch (err) {
-    console.error('Error reading vault index:', err);
-    return [];
-  }
-}
+// In-memory cache for ultra-fast response & serverless safety
+let inMemoryDocs = null;
 
 function getInitialSeedData() {
   return [
@@ -233,13 +210,48 @@ function getInitialSeedData() {
 }
 
 /**
+ * Helper to read JSON vault index
+ */
+function readVaultIndex() {
+  if (inMemoryDocs && inMemoryDocs.length > 0) {
+    return inMemoryDocs;
+  }
+
+  try {
+    if (fs.existsSync(VAULT_INDEX_FILE)) {
+      const data = fs.readFileSync(VAULT_INDEX_FILE, 'utf-8');
+      const parsed = JSON.parse(data || '[]');
+      if (parsed && parsed.length > 0) {
+        inMemoryDocs = parsed;
+        return parsed;
+      }
+    }
+  } catch (err) {
+    console.warn('Could not read index file, falling back to seed:', err.message);
+  }
+
+  const initialSeed = getInitialSeedData();
+  inMemoryDocs = initialSeed;
+  
+  try {
+    fs.writeFileSync(VAULT_INDEX_FILE, JSON.stringify(initialSeed, null, 2), 'utf-8');
+    initialSeed.forEach(doc => saveMarkdownFile(doc));
+  } catch (e) {
+    // Disk write might be read-only on some serverless platforms; in-memory fallback handles it
+  }
+
+  return initialSeed;
+}
+
+/**
  * Helper to write JSON vault index
  */
 function writeVaultIndex(items) {
+  inMemoryDocs = items;
   try {
     fs.writeFileSync(VAULT_INDEX_FILE, JSON.stringify(items, null, 2), 'utf-8');
   } catch (err) {
-    console.error('Error writing vault index:', err);
+    console.warn('Notice: Vault index saved to memory cache.');
   }
 }
 
@@ -287,14 +299,12 @@ ${(doc.reviewer?.flashcards || []).map((f, i) => `### Q${i+1}: ${f.question}\n**
 
     fs.writeFileSync(mdPath, frontmatter, 'utf-8');
   } catch (err) {
-    console.error('Error saving markdown vault file:', err);
+    // Graceful fallback
   }
 }
 
 /**
  * Save new or updated document to vault
- * @param {Object} doc 
- * @returns {Object} saved document
  */
 export function saveDocument(doc) {
   const docs = readVaultIndex();
@@ -303,7 +313,7 @@ export function saveDocument(doc) {
   const completeDoc = {
     id: doc.id || `doc-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
     title: doc.title || 'Untitled Document',
-    type: doc.type || 'note', // 'pdf' | 'youtube' | 'note'
+    type: doc.type || 'note',
     sourceUrl: doc.sourceUrl || '',
     thumbnailUrl: doc.thumbnailUrl || null,
     author: doc.author || null,
@@ -336,24 +346,15 @@ export function saveDocument(doc) {
   return completeDoc;
 }
 
-/**
- * List all documents
- */
 export function getAllDocuments() {
   return readVaultIndex();
 }
 
-/**
- * Get document by ID
- */
 export function getDocumentById(id) {
   const docs = readVaultIndex();
   return docs.find(d => d.id === id) || null;
 }
 
-/**
- * Update document by ID
- */
 export function updateDocument(id, updates) {
   const docs = readVaultIndex();
   const idx = docs.findIndex(d => d.id === id);
@@ -370,15 +371,11 @@ export function updateDocument(id, updates) {
   return docs[idx];
 }
 
-/**
- * Delete document by ID
- */
 export function deleteDocument(id) {
   const docs = readVaultIndex();
   const filtered = docs.filter(d => d.id !== id);
   writeVaultIndex(filtered);
 
-  // Remove corresponding md files
   try {
     const files = fs.readdirSync(config.vaultDir);
     for (const file of files) {
@@ -387,16 +384,12 @@ export function deleteDocument(id) {
       }
     }
   } catch (err) {
-    console.error('Error deleting file:', err);
+    // Ignore
   }
 
   return true;
 }
 
-/**
- * Generate Obsidian Knowledge Graph Data
- * Extracts nodes (documents, concepts, tags) and links (references, memberships, co-occurrences)
- */
 export function getKnowledgeGraphData() {
   const docs = readVaultIndex();
   const nodesMap = new Map();
@@ -412,23 +405,21 @@ export function getKnowledgeGraphData() {
     }
   }
 
-  // 1. Add Document Nodes
   docs.forEach(doc => {
     const docNodeId = `doc:${doc.id}`;
     nodesMap.set(docNodeId, {
       id: docNodeId,
       docId: doc.id,
       label: doc.title,
-      type: doc.type, // 'pdf' | 'youtube' | 'note'
+      type: doc.type,
       category: 'document',
       tags: doc.tags || [],
       sourceUrl: doc.sourceUrl,
       thumbnailUrl: doc.thumbnailUrl,
-      val: 20 + Math.min(30, (doc.tags?.length || 0) * 4), // Node size
+      val: 20 + Math.min(30, (doc.tags?.length || 0) * 4),
       color: doc.type === 'pdf' ? '#fb4934' : doc.type === 'youtube' ? '#fe8019' : '#83a598'
     });
 
-    // 2. Add Tags & Links
     (doc.tags || []).forEach(tag => {
       const cleanTag = tag.replace(/^#/, '').trim();
       if (!cleanTag) return;
@@ -441,7 +432,7 @@ export function getKnowledgeGraphData() {
           type: 'tag',
           category: 'tag',
           val: 12,
-          color: '#8ec07c' // Gruvbox Aqua
+          color: '#8ec07c'
         });
       } else {
         const existing = nodesMap.get(tagNodeId);
@@ -451,7 +442,6 @@ export function getKnowledgeGraphData() {
       addLink(docNodeId, tagNodeId, 'has_tag', 1);
     });
 
-    // 3. Add Concept / Entity Nodes & Links
     const entities = doc.entities || doc.reviewer?.entities || [];
     entities.forEach(ent => {
       const entName = typeof ent === 'string' ? ent : ent.name;
@@ -466,7 +456,7 @@ export function getKnowledgeGraphData() {
           category: 'concept',
           description: ent.description || '',
           val: 14,
-          color: '#fabd2f' // Gruvbox Yellow
+          color: '#fabd2f'
         });
       } else {
         const existing = nodesMap.get(entNodeId);
@@ -475,7 +465,6 @@ export function getKnowledgeGraphData() {
 
       addLink(docNodeId, entNodeId, 'discusses', 2);
 
-      // Connect concept to related concepts
       if (ent.relatedTo && Array.isArray(ent.relatedTo)) {
         ent.relatedTo.forEach(relName => {
           const relNodeId = `concept:${relName.toLowerCase()}`;
@@ -494,7 +483,6 @@ export function getKnowledgeGraphData() {
       }
     });
 
-    // 4. Wikilinks
     const wikilinks = doc.wikilinks || doc.reviewer?.wikilinks || [];
     wikilinks.forEach(wl => {
       const cleanWl = wl.replace(/[\[\]]/g, '').trim();
