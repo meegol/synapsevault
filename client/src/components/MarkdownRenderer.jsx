@@ -11,7 +11,7 @@ export default function MarkdownRenderer({ content = '', onWikilinkClick }) {
   });
 
   return (
-    <div className="prose-vault text-xs leading-relaxed text-gruvbox-fg">
+    <div className="prose-vault text-xs leading-relaxed text-gruvbox-fg space-y-2">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{
@@ -19,13 +19,13 @@ export default function MarkdownRenderer({ content = '', onWikilinkClick }) {
             <h1 className="text-base font-bold text-gruvbox-fgLight mt-4 mb-2 pb-1 border-b border-gruvbox-bg1" {...props} />
           ),
           h2: ({ node, ...props }) => (
-            <h2 className="text-sm font-bold text-gruvbox-yellow mt-3.5 mb-1.5" {...props} />
+            <h2 className="text-sm font-bold text-gruvbox-yellow mt-4 mb-2" {...props} />
           ),
           h3: ({ node, ...props }) => (
-            <h3 className="text-xs font-bold text-gruvbox-aqua mt-3 mb-1 uppercase tracking-wider" {...props} />
+            <h3 className="text-xs font-bold text-gruvbox-aqua mt-3.5 mb-1.5 uppercase tracking-wider" {...props} />
           ),
           h4: ({ node, ...props }) => (
-            <h4 className="text-xs font-bold text-gruvbox-orange mt-2 mb-1" {...props} />
+            <h4 className="text-xs font-bold text-gruvbox-orange mt-2.5 mb-1" {...props} />
           ),
           p: ({ node, ...props }) => (
             <p className="mb-2.5 leading-relaxed text-gruvbox-fg" {...props} />
@@ -37,13 +37,13 @@ export default function MarkdownRenderer({ content = '', onWikilinkClick }) {
             <em className="italic text-gruvbox-yellow" {...props} />
           ),
           ul: ({ node, ...props }) => (
-            <ul className="list-disc list-inside mb-2.5 space-y-1 pl-1 text-gruvbox-fg" {...props} />
+            <ul className="list-disc pl-5 my-2 space-y-1.5 text-gruvbox-fg marker:text-gruvbox-yellow" {...props} />
           ),
           ol: ({ node, ...props }) => (
-            <ol className="list-decimal list-inside mb-2.5 space-y-1 pl-1 text-gruvbox-fg" {...props} />
+            <ol className="list-decimal pl-5 my-2 space-y-1.5 text-gruvbox-fg marker:text-gruvbox-aqua font-medium" {...props} />
           ),
           li: ({ node, ...props }) => (
-            <li className="text-gruvbox-fg leading-relaxed" {...props} />
+            <li className="text-gruvbox-fg leading-relaxed pl-0.5" {...props} />
           ),
           code: ({ node, inline, className, children, ...props }) => {
             if (inline) {

@@ -64,6 +64,8 @@ export function extractKeywords(text, maxKeywords = 12) {
   return sorted;
 }
 
+import { sanitizeDocumentText } from '../utils/textSanitizer.js';
+
 /**
  * Generate a comprehensive fallback reviewer without an LLM
  * @param {Object} params
@@ -73,31 +75,53 @@ export function extractKeywords(text, maxKeywords = 12) {
  * @returns {Object}
  */
 export function generateHeuristicReviewer({ title, sourceType, content }) {
-  const sentences = content
-    .split(/(?<=[.?!])\s+/)
-    .map(s => s.trim())
-    .filter(s => s.length > 25);
+  const cleanText = sanitizeDocumentText(content);
+  
+  // Extract real explanatory sentences (filter out TOC lines and short titles)
+  const rawSentences = cleanText
+    .split(/(?<=[.?!])\s+|\n\n+/)
+    .map(s => s.trim().replace(/\s+/g, ' '))
+    .filter(s => {
+      if (s.length < 35) return false;
+      if (/^(?:table of contents|contents|page \d|ep \d)/i.test(s)) return false;
+      // Skip lines that have excessive numbers or dots (TOC artifacts)
+      const numRatio = (s.match(/\d/g) || []).length / s.length;
+      return numRatio < 0.15;
+    });
 
-  const keywords = extractKeywords(content, 10);
+  const sentences = rawSentences.length > 0 ? rawSentences : cleanText.split('\n').filter(s => s.trim().length > 20);
+
+  const keywords = extractKeywords(cleanText, 10);
   const tags = keywords.slice(0, 5).map(k => k.term.toLowerCase().replace(/\s+/g, '-'));
 
   // Split into chunks for sections
-  const chunkSize = Math.max(3, Math.ceil(sentences.length / 4));
+  const chunkSize = Math.max(2, Math.ceil(sentences.length / 4));
   const sections = [];
 
   for (let i = 0; i < sentences.length; i += chunkSize) {
     const chunkSentences = sentences.slice(i, i + chunkSize);
-    const chunkText = chunkSentences.join(' ');
-    const chunkKeywords = extractKeywords(chunkText, 4);
+    const chunkKeywords = extractKeywords(chunkSentences.join(' '), 4);
 
-    const sectionTitle = chunkKeywords[0] ? `Part ${sections.length + 1}: ${chunkKeywords[0].term} & Concepts` : `Section ${sections.length + 1}`;
+    const sectionTitle = chunkKeywords[0] ? `${chunkKeywords[0].term} & Core Principles` : `Section ${sections.length + 1}`;
     
+    // Format detailed notes with structured markdown bullets and bold keywords
+    const formattedNotes = chunkSentences.map((s, sIdx) => {
+      // Bold the first few words or key concepts
+      const words = s.split(' ');
+      if (words.length > 4) {
+        const lead = words.slice(0, 3).join(' ');
+        const rest = words.slice(3).join(' ');
+        return `- **${lead}** ${rest}`;
+      }
+      return `- ${s}`;
+    }).join('\n\n');
+
     sections.push({
       sectionTitle,
-      detailedNotesMarkdown: chunkSentences.map(s => `- ${s}`).join('\n\n'),
+      detailedNotesMarkdown: `### Overview & Core Concepts\n\n${formattedNotes}`,
       keyTerms: chunkKeywords.map(k => ({
         term: k.term,
-        definition: `Crucial concept identified in ${title} associated with key discussions.`
+        definition: `Fundamental concept identified in ${title}.`
       })),
       formulasOrRules: []
     });
@@ -105,9 +129,9 @@ export function generateHeuristicReviewer({ title, sourceType, content }) {
 
   // Generate Flashcards
   const flashcards = keywords.slice(0, 6).map((k, idx) => {
-    const sentenceWithKey = sentences.find(s => s.toLowerCase().includes(k.term.toLowerCase())) || `Discussion centered around ${k.term}.`;
+    const sentenceWithKey = sentences.find(s => s.toLowerCase().includes(k.term.toLowerCase())) || `Foundational concept regarding ${k.term}.`;
     return {
-      question: `What is the significance of "${k.term}" in this context?`,
+      question: `What is the role and significance of **${k.term}** in this material?`,
       answer: sentenceWithKey,
       category: k.term,
       difficulty: idx % 2 === 0 ? 'medium' : 'easy'
@@ -116,28 +140,34 @@ export function generateHeuristicReviewer({ title, sourceType, content }) {
 
   // Generate Practice Quiz Questions
   const quizQuestions = keywords.slice(0, 4).map((k, idx) => {
-    const relatedSentence = sentences.find(s => s.toLowerCase().includes(k.term.toLowerCase())) || `${k.term} represents a core pillar discussed in the material.`;
+    const relatedSentence = sentences.find(s => s.toLowerCase().includes(k.term.toLowerCase())) || `${k.term} is an essential structural element in the system.`;
     return {
-      question: `Which of the following statements accurately characterizes "${k.term}" based on the document?`,
+      question: `Which statement best describes the function of **${k.term}**?`,
       options: [
-        relatedSentence.slice(0, 120) + '...',
-        `It is completely unrelated to the primary objectives of the study.`,
-        `It was superseded and deprecated in earlier iterations of the architecture.`,
-        `It functions solely as an auxiliary data placeholder.`
+        relatedSentence.length > 140 ? relatedSentence.slice(0, 140) + '...' : relatedSentence,
+        `It is an obsolete concept with no practical application.`,
+        `It is solely used for external archival references.`,
+        `It represents an unverified alternative hypothesis.`
       ],
       correctIndex: 0,
-      explanation: `According to the source material: "${relatedSentence}".`
+      explanation: `Based on the source text: "${relatedSentence}".`
     };
   });
 
+  // Create clean formatted executive summary in markdown with bullet points
+  const topSentences = sentences.slice(0, 4);
+  const formattedSummary = topSentences.length > 0
+    ? topSentences.map(s => `- ${s}`).join('\n\n')
+    : `This document explores foundational concepts, frameworks, and key methodologies in **${title}**.`;
+
   return {
     title,
-    executiveSummary: sentences.slice(0, 3).join(' ') || `${title} provides in-depth exploration and foundational analysis.`,
-    keyTakeaways: sentences.slice(0, 5),
+    executiveSummary: formattedSummary,
+    keyTakeaways: sentences.slice(0, 5).map(s => s.length > 120 ? s.slice(0, 120) + '...' : s),
     comprehensiveSections: sections,
     glossary: keywords.map(k => ({
       term: k.term,
-      definition: `Key concept highlighted within ${title}.`,
+      definition: `Core concept highlighted within ${title}.`,
       category: 'Core Concept'
     })),
     tags,

@@ -45,6 +45,8 @@ export function extractJsonFromText(rawText) {
  * @param {string} [params.extraContext]
  * @returns {Promise<Object>}
  */
+import { sanitizeDocumentText } from '../utils/textSanitizer.js';
+
 export async function generateDeepReviewerWithGemini({ title, sourceType, content, extraContext = '' }) {
   const primaryModel = config.selectedModel || 'gemini-2.5-flash';
   const modelsToTry = [primaryModel, 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'].filter(Boolean);
@@ -54,27 +56,38 @@ export async function generateDeepReviewerWithGemini({ title, sourceType, conten
     throw new Error('Gemini API key is missing in server configuration.');
   }
 
+  const cleanContent = sanitizeDocumentText(content);
+
   const systemInstructions = `
-You are a study notes and knowledge extraction engine.
-Given source material, extract an exhaustive, high-density study reviewer, active recall flashcards, practice questions, and concept relationship links.
-Do not omit definitions, proofs, steps, formulas, or operational nuances.
+You are an expert academic knowledge extraction and master reviewer synthesis engine.
+Given source material, extract an exhaustive, beautifully formatted study reviewer, active recall flashcards, practice questions, and concept relationship links.
+
+CRITICAL FORMATTING & NOISE REDUCTION RULES:
+1. NEVER output raw Table of Contents dumps, page numbers, dots (...), or repetitive watermark author tags (e.g. "[Notes by ...]").
+2. Executive Summary MUST be formatted in rich, clean Markdown with structured paragraphs, bold emphasis on core mechanisms, and key bullet points.
+3. Detailed Notes MUST use clear Markdown structure:
+   - Section subheadings (### Subtopic)
+   - Numbered steps (1. 2. 3.) for processes and cycles
+   - Highlighted bullet points (- **Concept/Term**: Detailed explanation)
+   - Code/Formula blocks for operational rules
+4. Always explain concepts thoroughly with practical nuances, rules of thumb, and cause-and-effect relationships.
 
 Return valid JSON adhering to this schema:
 {
-  "title": "Document Title",
-  "executiveSummary": "Concise 2-3 paragraph summary of core arguments and purpose.",
+  "title": "Clean Descriptive Document Title",
+  "executiveSummary": "Rich 2-3 paragraph markdown summary with bold key points and clear structural context.",
   "keyTakeaways": [
-    "Key takeaway point with full context"
+    "Key takeaway point with full explanatory context"
   ],
   "comprehensiveSections": [
     {
-      "sectionTitle": "Section Title",
-      "detailedNotesMarkdown": "Thorough markdown notes with sub-points, explanations, and context.",
+      "sectionTitle": "Clear Section Title",
+      "detailedNotesMarkdown": "Thorough, beautifully structured markdown notes with ### headings, - **bold sub-points**, and numbered steps.",
       "keyTerms": [
-        { "term": "Term", "definition": "Clear definition" }
+        { "term": "Term", "definition": "Clear, precise operational definition" }
       ],
       "formulasOrRules": [
-        { "name": "Formula or Rule Name", "formula": "Formula (LaTeX format for math)", "explanation": "Context and usage" }
+        { "name": "Formula or Rule Name", "formula": "Formula (LaTeX format for math if applicable)", "explanation": "Context, criteria, and usage" }
       ]
     }
   ],
@@ -114,7 +127,7 @@ Return valid JSON adhering to this schema:
 }
 `;
 
-  const safeContent = content.length > 800000 ? content.slice(0, 800000) + '\n[Truncated]' : content;
+  const safeContent = cleanContent.length > 800000 ? cleanContent.slice(0, 800000) + '\n[Truncated]' : cleanContent;
 
   const prompt = `
 TITLE: ${title}
