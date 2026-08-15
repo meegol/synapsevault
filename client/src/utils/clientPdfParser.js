@@ -14,14 +14,14 @@ function extractJpegsFromArrayBuffer(arrayBuffer) {
   const len = uint8.length;
   
   let i = 0;
-  while (i < len - 4 && images.length < 15) {
+  while (i < len - 4 && images.length < 8) {
     // Find JPEG Start of Image (FF D8 FF)
     if (uint8[i] === 0xFF && uint8[i+1] === 0xD8 && uint8[i+2] === 0xFF) {
       const startIdx = i;
       let endIdx = -1;
       
       // Look for JPEG End of Image (FF D9)
-      for (let j = startIdx + 3; j < Math.min(len - 1, startIdx + 8 * 1024 * 1024); j++) {
+      for (let j = startIdx + 3; j < Math.min(len - 1, startIdx + 2 * 1024 * 1024); j++) {
         if (uint8[j] === 0xFF && uint8[j+1] === 0xD9) {
           endIdx = j + 2;
           break;
@@ -30,7 +30,7 @@ function extractJpegsFromArrayBuffer(arrayBuffer) {
       
       if (endIdx !== -1) {
         const sizeBytes = endIdx - startIdx;
-        if (sizeBytes > 2500) { // Skip tiny icons/dots
+        if (sizeBytes > 3000 && sizeBytes < 1500000) { // Skip tiny icons and giant raw scans
           const chunk = uint8.subarray(startIdx, endIdx);
           let binary = '';
           const chunkLen = chunk.byteLength;
