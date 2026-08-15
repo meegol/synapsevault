@@ -192,7 +192,7 @@ export default function App() {
   const selectedDocument = documents.find(d => d.id === selectedDocId) || documents[0];
 
   return (
-    <div className="min-h-screen bg-gruvbox-bgHard text-gruvbox-fg flex flex-col overflow-hidden font-sans">
+    <div className="h-screen w-screen bg-gruvbox-bgHard text-gruvbox-fg flex flex-col overflow-hidden font-sans select-none">
       
       {/* Top Navbar */}
       <Navbar
@@ -206,10 +206,10 @@ export default function App() {
       />
 
       {/* Main Workspace Layout */}
-      <div className="flex-1 flex overflow-hidden relative">
+      <div className="flex-1 flex min-h-0 min-w-0 overflow-hidden relative">
         
         {/* Desktop Left Sidebar */}
-        <div className="hidden md:block">
+        <div className="hidden md:flex flex-col flex-shrink-0 h-full min-h-0">
           <Sidebar
             documents={documents}
             selectedDocId={selectedDocId}
@@ -246,7 +246,7 @@ export default function App() {
         )}
 
         {/* Center Main View Canvas / Studio / Chat */}
-        <main className="flex-1 flex flex-col overflow-hidden pb-16 md:pb-0">
+        <main className="flex-1 flex flex-col min-h-0 min-w-0 h-full overflow-hidden pb-16 md:pb-0">
           {activeView === 'graph' && (
             <GraphView
               graphData={graphData}

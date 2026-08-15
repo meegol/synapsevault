@@ -12,7 +12,10 @@ import {
   Hash, 
   ChevronDown, 
   ChevronUp, 
-  Trash2 
+  Trash2,
+  Image as ImageIcon,
+  ZoomIn,
+  X
 } from 'lucide-react';
 import YouTubeIcon from './YouTubeIcon';
 import FlashcardsView from './FlashcardsView';
@@ -26,14 +29,15 @@ export default function ReviewerStudio({
   onFlashcardReview,
   onQuizComplete
 }) {
-  const [activeTab, setActiveTab] = useState('reviewer'); // 'reviewer' | 'flashcards' | 'quiz' | 'source'
+  const [activeTab, setActiveTab] = useState('reviewer'); // 'reviewer' | 'figures' | 'flashcards' | 'quiz' | 'source'
   const [copied, setCopied] = useState(false);
   const [expandedSections, setExpandedSections] = useState({});
   const [currentYtTime, setCurrentYtTime] = useState(0);
+  const [activeLightboxImg, setActiveLightboxImg] = useState(null);
 
   if (!document) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center p-12 text-center select-none font-mono">
+      <div className="flex-1 h-full flex flex-col items-center justify-center p-12 text-center select-none font-mono">
         <BookOpen className="w-10 h-10 text-gruvbox-gray mb-3 opacity-40" />
         <h3 className="text-sm font-bold text-gruvbox-fg">No Document Selected</h3>
         <p className="text-xs text-gruvbox-gray mt-1 max-w-sm">
@@ -43,7 +47,7 @@ export default function ReviewerStudio({
     );
   }
 
-  const { reviewer, type, title, sourceUrl, author, durationFormatted, wordCount, chapters } = document;
+  const { reviewer, type, title, sourceUrl, author, durationFormatted, wordCount, chapters, images = [] } = document;
 
   const isPdf = type === 'pdf';
   const isYt = type === 'youtube';
@@ -110,10 +114,10 @@ ${(reviewer?.glossary || []).map(g => `- **${g.term}**: ${g.definition}`).join('
   };
 
   return (
-    <div className="flex-1 h-[calc(100vh-3.5rem)] flex flex-col bg-gruvbox-bgHard overflow-hidden font-mono">
+    <div className="flex-1 h-full min-h-0 flex flex-col bg-gruvbox-bgHard font-mono overflow-hidden">
       
       {/* Top Header */}
-      <div className="p-4 md:px-6 border-b border-gruvbox-bg1 bg-gruvbox-bgHard/90 backdrop-blur-md flex flex-col md:flex-row md:items-center justify-between gap-3 select-none">
+      <div className="p-4 md:px-6 border-b border-gruvbox-bg1 bg-gruvbox-bgHard/90 backdrop-blur-md flex flex-col md:flex-row md:items-center justify-between gap-3 select-none flex-shrink-0">
         <div className="flex items-start gap-3 min-w-0">
           <div className={`p-2 rounded-lg mt-0.5 flex-shrink-0 ${
             isPdf ? 'bg-gruvbox-red/20 text-gruvbox-red' :
@@ -137,6 +141,11 @@ ${(reviewer?.glossary || []).map(g => `- **${g.term}**: ${g.definition}`).join('
               {wordCount > 0 && (
                 <span className="text-xs text-gruvbox-gray">
                   {wordCount.toLocaleString()} words
+                </span>
+              )}
+              {images.length > 0 && (
+                <span className="text-xs text-gruvbox-aqua flex items-center gap-1">
+                  <ImageIcon className="w-3 h-3" /> {images.length} {images.length === 1 ? 'Figure' : 'Figures'}
                 </span>
               )}
             </div>
@@ -195,7 +204,7 @@ ${(reviewer?.glossary || []).map(g => `- **${g.term}**: ${g.definition}`).join('
       </div>
 
       {/* Tabs */}
-      <div className="px-4 md:px-6 border-b border-gruvbox-bg1 bg-gruvbox-bg/40 flex items-center gap-1 select-none overflow-x-auto">
+      <div className="px-4 md:px-6 border-b border-gruvbox-bg1 bg-gruvbox-bg/40 flex items-center gap-1 select-none overflow-x-auto flex-shrink-0">
         <button
           onClick={() => setActiveTab('reviewer')}
           className={`flex items-center gap-1.5 py-2.5 px-3.5 text-xs font-semibold border-b-2 transition-colors ${
@@ -207,6 +216,20 @@ ${(reviewer?.glossary || []).map(g => `- **${g.term}**: ${g.definition}`).join('
           <BookOpen className="w-3.5 h-3.5" />
           Study Notes
         </button>
+
+        {images.length > 0 && (
+          <button
+            onClick={() => setActiveTab('figures')}
+            className={`flex items-center gap-1.5 py-2.5 px-3.5 text-xs font-semibold border-b-2 transition-colors ${
+              activeTab === 'figures'
+                ? 'border-gruvbox-aqua text-gruvbox-aqua'
+                : 'border-transparent text-gruvbox-gray hover:text-gruvbox-fg'
+            }`}
+          >
+            <ImageIcon className="w-3.5 h-3.5" />
+            Figures & Diagrams ({images.length})
+          </button>
+        )}
 
         <button
           onClick={() => setActiveTab('flashcards')}
@@ -245,11 +268,12 @@ ${(reviewer?.glossary || []).map(g => `- **${g.term}**: ${g.definition}`).join('
         </button>
       </div>
 
-      {/* Main Content */}
-      <div className="flex-1 overflow-y-auto p-4 md:p-6">
+      {/* Main Scrollable Content */}
+      <div className="flex-1 min-h-0 overflow-y-auto p-4 md:p-6">
         
+        {/* TAB 1: STUDY NOTES */}
         {activeTab === 'reviewer' && (
-          <div className="max-w-3xl mx-auto space-y-6">
+          <div className="max-w-3xl mx-auto space-y-6 pb-12">
             
             {/* Executive Summary */}
             {reviewer?.executiveSummary && (
@@ -260,6 +284,40 @@ ${(reviewer?.glossary || []).map(g => `- **${g.term}**: ${g.definition}`).join('
                 <p className="text-xs text-gruvbox-fg leading-relaxed">
                   {reviewer.executiveSummary}
                 </p>
+              </div>
+            )}
+
+            {/* Figures Preview Strip if Available */}
+            {images.length > 0 && (
+              <div className="glass-panel p-4 rounded-xl border border-gruvbox-bg1">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-[11px] font-bold text-gruvbox-aqua uppercase tracking-wider flex items-center gap-1.5">
+                    <ImageIcon className="w-3.5 h-3.5" /> Extracted Figures ({images.length})
+                  </span>
+                  <button
+                    onClick={() => setActiveTab('figures')}
+                    className="text-[10px] text-gruvbox-yellow hover:underline"
+                  >
+                    View All
+                  </button>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5">
+                  {images.slice(0, 4).map((img, i) => (
+                    <div 
+                      key={img.id || i}
+                      onClick={() => setActiveLightboxImg(img)}
+                      className="group relative aspect-video rounded-lg overflow-hidden border border-gruvbox-bg1 bg-gruvbox-bg cursor-pointer hover:border-gruvbox-aqua transition-colors"
+                    >
+                      <img src={img.dataUrl} alt={img.name} className="w-full h-full object-cover" />
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                        <ZoomIn className="w-4 h-4 text-gruvbox-fgLight" />
+                      </div>
+                      <div className="absolute bottom-0 inset-x-0 bg-black/70 px-1.5 py-0.5 text-[9px] text-gruvbox-fgDim truncate">
+                        {img.name}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
 
@@ -412,6 +470,48 @@ ${(reviewer?.glossary || []).map(g => `- **${g.term}**: ${g.definition}`).join('
           </div>
         )}
 
+        {/* TAB 2: FIGURES & DIAGRAMS */}
+        {activeTab === 'figures' && (
+          <div className="max-w-4xl mx-auto space-y-6 pb-12">
+            <div>
+              <h3 className="text-xs font-bold text-gruvbox-aqua uppercase tracking-wider mb-1">
+                Extracted Figures & Diagrams ({images.length})
+              </h3>
+              <p className="text-[11px] text-gruvbox-gray">
+                High-resolution diagrams extracted directly from the uploaded document.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+              {images.map((img, i) => (
+                <div
+                  key={img.id || i}
+                  className="glass-panel rounded-xl overflow-hidden border border-gruvbox-bg1 group cursor-pointer hover:border-gruvbox-aqua transition-colors flex flex-col"
+                  onClick={() => setActiveLightboxImg(img)}
+                >
+                  <div className="relative aspect-video bg-black/40 overflow-hidden flex items-center justify-center">
+                    <img
+                      src={img.dataUrl}
+                      alt={img.name}
+                      className="w-full h-full object-contain group-hover:scale-105 transition-transform"
+                    />
+                    <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                      <ZoomIn className="w-5 h-5 text-gruvbox-fgLight" />
+                    </div>
+                  </div>
+                  <div className="p-3 flex items-center justify-between border-t border-gruvbox-bg1 bg-gruvbox-bg/50">
+                    <span className="text-xs font-bold text-gruvbox-fg">{img.name}</span>
+                    <span className="text-[10px] text-gruvbox-gray">
+                      {(img.sizeBytes / 1024).toFixed(1)} KB
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* TAB 3: FLASHCARDS */}
         {activeTab === 'flashcards' && (
           <FlashcardsView
             flashcards={document.flashcards || []}
@@ -420,6 +520,7 @@ ${(reviewer?.glossary || []).map(g => `- **${g.term}**: ${g.definition}`).join('
           />
         )}
 
+        {/* TAB 4: QUIZ */}
         {activeTab === 'quiz' && (
           <QuizView
             quizQuestions={document.quizQuestions || []}
@@ -428,8 +529,9 @@ ${(reviewer?.glossary || []).map(g => `- **${g.term}**: ${g.definition}`).join('
           />
         )}
 
+        {/* TAB 5: SOURCE */}
         {activeTab === 'source' && (
-          <div className="max-w-3xl mx-auto space-y-4">
+          <div className="max-w-3xl mx-auto space-y-4 pb-12">
             {isYt ? (
               <div className="space-y-4">
                 {document.sourceUrl && (
@@ -483,6 +585,37 @@ ${(reviewer?.glossary || []).map(g => `- **${g.term}**: ${g.definition}`).join('
         )}
 
       </div>
+
+      {/* Lightbox Modal for Full-Resolution Image Inspection */}
+      {activeLightboxImg && (
+        <div 
+          className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 select-none"
+          onClick={() => setActiveLightboxImg(null)}
+        >
+          <div 
+            className="relative max-w-4xl max-h-[90vh] bg-gruvbox-bgHard border border-gruvbox-bg1 rounded-2xl overflow-hidden shadow-2xl flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-3 px-4 border-b border-gruvbox-bg1 flex items-center justify-between bg-gruvbox-bg/60">
+              <span className="text-xs font-bold text-gruvbox-fgLight">{activeLightboxImg.name}</span>
+              <button
+                onClick={() => setActiveLightboxImg(null)}
+                className="p-1 rounded hover:bg-gruvbox-bg1 text-gruvbox-gray hover:text-gruvbox-fg"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="p-4 overflow-auto max-h-[calc(90vh-4rem)] flex items-center justify-center bg-black/40">
+              <img
+                src={activeLightboxImg.dataUrl}
+                alt={activeLightboxImg.name}
+                className="max-h-full max-w-full object-contain rounded-lg shadow-lg"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
