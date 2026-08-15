@@ -103,11 +103,15 @@ export default function App() {
 
   const handleDeleteDoc = async (docId) => {
     try {
+      setDocuments(prev => {
+        const next = prev.filter(d => d.id !== docId);
+        if (selectedDocId === docId) {
+          setSelectedDocId(next.length > 0 ? next[0].id : null);
+        }
+        return next;
+      });
       await apiFetch(`/api/documents/${docId}`, { method: 'DELETE' });
       fetchVaultData();
-      if (selectedDocId === docId) {
-        setSelectedDocId(null);
-      }
     } catch (err) {
       console.error('Failed to delete document:', err);
     }

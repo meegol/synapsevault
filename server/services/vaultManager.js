@@ -6,6 +6,7 @@ const VAULT_INDEX_FILE = path.join(config.vaultDir, 'vault_index.json');
 
 // In-memory cache for ultra-fast response & serverless safety
 let inMemoryDocs = null;
+let isInitialized = false;
 
 function getInitialSeedData() {
   return [
@@ -213,7 +214,7 @@ function getInitialSeedData() {
  * Helper to read JSON vault index
  */
 function readVaultIndex() {
-  if (inMemoryDocs && inMemoryDocs.length > 0) {
+  if (isInitialized && inMemoryDocs !== null) {
     return inMemoryDocs;
   }
 
@@ -221,26 +222,28 @@ function readVaultIndex() {
     if (fs.existsSync(VAULT_INDEX_FILE)) {
       const data = fs.readFileSync(VAULT_INDEX_FILE, 'utf-8');
       const parsed = JSON.parse(data || '[]');
-      if (parsed && parsed.length > 0) {
+      if (Array.isArray(parsed)) {
         inMemoryDocs = parsed;
-        return parsed;
+        isInitialized = true;
+        return inMemoryDocs;
       }
     }
   } catch (err) {
-    console.warn('Could not read index file, falling back to seed:', err.message);
+    console.warn('Could not read index file:', err.message);
   }
 
-  const initialSeed = getInitialSeedData();
-  inMemoryDocs = initialSeed;
-  
-  try {
-    fs.writeFileSync(VAULT_INDEX_FILE, JSON.stringify(initialSeed, null, 2), 'utf-8');
-    initialSeed.forEach(doc => saveMarkdownFile(doc));
-  } catch (e) {
-    // Disk write might be read-only on some serverless platforms; in-memory fallback handles it
+  if (!isInitialized) {
+    const initialSeed = getInitialSeedData();
+    inMemoryDocs = initialSeed;
+    isInitialized = true;
+    try {
+      fs.writeFileSync(VAULT_INDEX_FILE, JSON.stringify(initialSeed, null, 2), 'utf-8');
+      initialSeed.forEach(doc => saveMarkdownFile(doc));
+    } catch (e) {}
+    return initialSeed;
   }
 
-  return initialSeed;
+  return inMemoryDocs || [];
 }
 
 /**
@@ -248,6 +251,7 @@ function readVaultIndex() {
  */
 function writeVaultIndex(items) {
   inMemoryDocs = items;
+  isInitialized = true;
   try {
     fs.writeFileSync(VAULT_INDEX_FILE, JSON.stringify(items, null, 2), 'utf-8');
   } catch (err) {
