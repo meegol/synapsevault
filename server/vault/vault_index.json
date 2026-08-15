@@ -1,1 +1,322 @@
-[]
+[
+  {
+    "id": "doc-1786824640142-iku0g",
+    "title": "Market Efficiency Paradigm: IPDA Architecture & Algorithmic Cycle",
+    "type": "pdf",
+    "sourceUrl": "",
+    "thumbnailUrl": null,
+    "author": null,
+    "wordCount": 100,
+    "durationFormatted": null,
+    "rawText": "\n# Months 1 & 2: Market Efficiency Paradigm, Liquidity, & Risk Frameworks\n### 1. Elements of a Trade Setup & IPDA Architecture\n- **Algorithmic Cycle of Price Delivery**:\n1. **Consolidation**: Price oscillates within a defined range around an equilibrium price point (50% level).\n2. **Expansion**: Sudden, explosive displacement away from equilibrium. Indicates the Market Maker repricing intent.\n3. **Retracement**: Order flow moves back inside the newly created price range to rebalance inefficiently delivered price.\n4. **Reversal**: Price breaches key liquidity pools (old highs/lows) and aggressively moves in the opposite direction.\n    ",
+    "chapters": [],
+    "images": [],
+    "reviewer": {
+      "title": "Market Efficiency Paradigm: IPDA Architecture & Algorithmic Cycle",
+      "executiveSummary": "The provided source material outlines the foundational components of the Interbank Price Delivery Algorithm (IPDA) architecture, specifically detailing the four core phases of the Algorithmic Cycle of Price Delivery: Consolidation, Expansion, Retracement, and Reversal.\n\nThis framework conceptualizes market price movements as an engineered, algorithmic sequence driven by market makers rather than random fluctuations. The model establishes how price oscillates around an equilibrium baseline, rapidly reprices through explosive expansion, rebalances inefficiency via retracement, and targets external liquidity pools prior to reversing direction.",
+      "keyTakeaways": [
+        "Market price moves through a four-stage algorithmic delivery cycle: Consolidation, Expansion, Retracement, and Reversal.",
+        "Consolidation centers strictly on an equilibrium price point defined as the 50% level of the established range.",
+        "Expansion represents institutional displacement and directional intent to reprice the market.",
+        "Retracement serves to rebalance inefficiently delivered price action within the newly expanded range.",
+        "Reversal occurs following the breach of major liquidity pools (old highs and lows), prompting aggressive movement in the opposing direction."
+      ],
+      "comprehensiveSections": [
+        {
+          "sectionTitle": "Elements of a Trade Setup & IPDA Architecture",
+          "detailedNotesMarkdown": "### IPDA Architecture & Algorithmic Price Cycle\n\nThe Interbank Price Delivery Algorithm (IPDA) operates in a continuous four-stage cycle:\n\n1. **Consolidation**:\n   - Characterized by range-bound price action.\n   - Price oscillates symmetrically around an equilibrium point ($50\\%$ of the range).\n   - Accumulates orders and establishes boundaries for future liquidity pools.\n\n2. **Expansion**:\n   - Features sudden, explosive displacement.\n   - Breaks outside the consolidation boundary.\n   - Signals immediate institutional and market maker repricing intent.\n\n3. **Retracement**:\n   - Order flow counter-trend movement back inside the newly created price range.\n   - Primary function is to rebalance price inefficiencies created during the rapid expansion phase.\n\n4. **Reversal**:\n   - Occurs after price sweeps or breaches key liquidity pools (previous significant highs or lows).\n   - Characterized by aggressive, high-momentum movement in the opposite direction.",
+          "keyTerms": [
+            {
+              "term": "Consolidation",
+              "definition": "A state where price oscillates within a defined range around a 50% equilibrium level."
+            },
+            {
+              "term": "Expansion",
+              "definition": "A sudden, explosive displacement away from equilibrium indicating market maker repricing intent."
+            },
+            {
+              "term": "Retracement",
+              "definition": "Order flow moving back inside a newly formed range to rebalance inefficiently delivered price."
+            },
+            {
+              "term": "Reversal",
+              "definition": "An aggressive shift in price direction triggered after breaching key liquidity pools (old highs or lows)."
+            }
+          ],
+          "formulasOrRules": [
+            {
+              "name": "Equilibrium Formula",
+              "formula": "\\text{Equilibrium} = \\frac{\\text{Range High} + \\text{Range Low}}{2} = 50\\% \\text{ Level}",
+              "explanation": "Calculates the central balance point around which consolidation occurs."
+            },
+            {
+              "name": "Algorithmic Delivery Sequence",
+              "formula": "\\text{Consolidation} \\rightarrow \\text{Expansion} \\rightarrow \\text{Retracement} \\rightarrow \\text{Reversal / Expansion}",
+              "explanation": "The chronological progression of institutional price delivery stages."
+            }
+          ]
+        }
+      ],
+      "glossary": [
+        {
+          "term": "IPDA",
+          "definition": "Interbank Price Delivery Algorithm; the systematic engine governing institutional price action.",
+          "category": "Market Structure"
+        },
+        {
+          "term": "Equilibrium",
+          "definition": "The exact 50% midpoint of a defined trading range.",
+          "category": "Price Action"
+        },
+        {
+          "term": "Displacement",
+          "definition": "Rapid, unidirectional price expansion demonstrating clear institutional intent.",
+          "category": "Execution"
+        },
+        {
+          "term": "Liquidity Pool",
+          "definition": "Concentrated zones of resting orders, typically situated above old highs or below old lows.",
+          "category": "Liquidity"
+        }
+      ],
+      "tags": [
+        "IPDA",
+        "MarketEfficiency",
+        "PriceAction",
+        "AlgorithmicDelivery",
+        "Liquidity"
+      ],
+      "entities": [
+        {
+          "name": "IPDA Architecture",
+          "type": "Concept",
+          "description": "Framework explaining algorithmic price delivery mechanisms.",
+          "relatedTo": [
+            "Algorithmic Cycle of Price Delivery",
+            "Market Maker"
+          ]
+        },
+        {
+          "name": "Algorithmic Cycle of Price Delivery",
+          "type": "Concept",
+          "description": "The four-phase cycle comprising consolidation, expansion, retracement, and reversal.",
+          "relatedTo": [
+            "IPDA Architecture",
+            "Liquidity Pools"
+          ]
+        }
+      ],
+      "wikilinks": [
+        "[[IPDA Architecture]]",
+        "[[Algorithmic Cycle of Price Delivery]]",
+        "[[Consolidation]]",
+        "[[Expansion]]",
+        "[[Retracement]]",
+        "[[Reversal]]",
+        "[[Liquidity Pools]]"
+      ],
+      "flashcards": [
+        {
+          "question": "What are the four stages of the Algorithmic Cycle of Price Delivery in order?",
+          "answer": "1. Consolidation\n2. Expansion\n3. Retracement\n4. Reversal",
+          "category": "IPDA Architecture",
+          "difficulty": "easy"
+        },
+        {
+          "question": "What is the primary characteristic of the Consolidation phase in the price cycle?",
+          "answer": "Price oscillates within a defined range around an equilibrium price point (the 50% level).",
+          "category": "Price Action",
+          "difficulty": "medium"
+        },
+        {
+          "question": "What does a sudden, explosive Expansion phase signify regarding market maker activity?",
+          "answer": "It signifies clear displacement and intentional repricing by the Market Maker away from equilibrium.",
+          "category": "Price Action",
+          "difficulty": "medium"
+        },
+        {
+          "question": "What functional role does Retracement play in the IPDA cycle?",
+          "answer": "It moves price back into the newly created range to rebalance inefficiently delivered price action.",
+          "category": "Market Mechanics",
+          "difficulty": "hard"
+        },
+        {
+          "question": "What market event typically triggers an aggressive Reversal phase?",
+          "answer": "The breaching of key liquidity pools located at previous significant highs or lows.",
+          "category": "Liquidity",
+          "difficulty": "hard"
+        }
+      ],
+      "quizQuestions": [
+        {
+          "question": "Around which reference level does price oscillation occur during Consolidation?",
+          "options": [
+            "The 50% equilibrium level",
+            "The 78.6% retracement level",
+            "The previous daily high",
+            "The volume-weighted average price (VWAP)"
+          ],
+          "correctIndex": 0,
+          "explanation": "Consolidation is explicitly defined as price oscillating within a defined range around an equilibrium price point (50% level)."
+        },
+        {
+          "question": "Which phase is characterized by sudden, explosive displacement away from equilibrium?",
+          "options": [
+            "Retracement",
+            "Reversal",
+            "Expansion",
+            "Accumulation"
+          ],
+          "correctIndex": 2,
+          "explanation": "Expansion is defined as sudden, explosive displacement away from equilibrium that indicates Market Maker repricing intent."
+        },
+        {
+          "question": "What is the primary institutional purpose of a Retracement?",
+          "options": [
+            "To breach key liquidity pools",
+            "To rebalance inefficiently delivered price action",
+            "To establish a new long-term equilibrium",
+            "To initiate a complete trend reversal"
+          ],
+          "correctIndex": 1,
+          "explanation": "Retracement occurs when order flow moves back inside the newly created price range specifically to rebalance price that was inefficiently delivered."
+        },
+        {
+          "question": "Where are key liquidity pools primarily located according to the IPDA delivery model?",
+          "options": [
+            "At the 50% equilibrium price point",
+            "Inside newly created retracement gaps",
+            "At old highs and old lows",
+            "Exclusively during the expansion phase"
+          ],
+          "correctIndex": 2,
+          "explanation": "Key liquidity pools reside at old highs and old lows; breaching these zones triggers the aggressive reversal phase."
+        }
+      ]
+    },
+    "tags": [
+      "IPDA",
+      "MarketEfficiency",
+      "PriceAction",
+      "AlgorithmicDelivery",
+      "Liquidity"
+    ],
+    "entities": [
+      {
+        "name": "IPDA Architecture",
+        "type": "Concept",
+        "description": "Framework explaining algorithmic price delivery mechanisms.",
+        "relatedTo": [
+          "Algorithmic Cycle of Price Delivery",
+          "Market Maker"
+        ]
+      },
+      {
+        "name": "Algorithmic Cycle of Price Delivery",
+        "type": "Concept",
+        "description": "The four-phase cycle comprising consolidation, expansion, retracement, and reversal.",
+        "relatedTo": [
+          "IPDA Architecture",
+          "Liquidity Pools"
+        ]
+      }
+    ],
+    "wikilinks": [
+      "[[IPDA Architecture]]",
+      "[[Algorithmic Cycle of Price Delivery]]",
+      "[[Consolidation]]",
+      "[[Expansion]]",
+      "[[Retracement]]",
+      "[[Reversal]]",
+      "[[Liquidity Pools]]"
+    ],
+    "flashcards": [
+      {
+        "question": "What are the four stages of the Algorithmic Cycle of Price Delivery in order?",
+        "answer": "1. Consolidation\n2. Expansion\n3. Retracement\n4. Reversal",
+        "category": "IPDA Architecture",
+        "difficulty": "easy"
+      },
+      {
+        "question": "What is the primary characteristic of the Consolidation phase in the price cycle?",
+        "answer": "Price oscillates within a defined range around an equilibrium price point (the 50% level).",
+        "category": "Price Action",
+        "difficulty": "medium"
+      },
+      {
+        "question": "What does a sudden, explosive Expansion phase signify regarding market maker activity?",
+        "answer": "It signifies clear displacement and intentional repricing by the Market Maker away from equilibrium.",
+        "category": "Price Action",
+        "difficulty": "medium"
+      },
+      {
+        "question": "What functional role does Retracement play in the IPDA cycle?",
+        "answer": "It moves price back into the newly created range to rebalance inefficiently delivered price action.",
+        "category": "Market Mechanics",
+        "difficulty": "hard"
+      },
+      {
+        "question": "What market event typically triggers an aggressive Reversal phase?",
+        "answer": "The breaching of key liquidity pools located at previous significant highs or lows.",
+        "category": "Liquidity",
+        "difficulty": "hard"
+      }
+    ],
+    "quizQuestions": [
+      {
+        "question": "Around which reference level does price oscillation occur during Consolidation?",
+        "options": [
+          "The 50% equilibrium level",
+          "The 78.6% retracement level",
+          "The previous daily high",
+          "The volume-weighted average price (VWAP)"
+        ],
+        "correctIndex": 0,
+        "explanation": "Consolidation is explicitly defined as price oscillating within a defined range around an equilibrium price point (50% level)."
+      },
+      {
+        "question": "Which phase is characterized by sudden, explosive displacement away from equilibrium?",
+        "options": [
+          "Retracement",
+          "Reversal",
+          "Expansion",
+          "Accumulation"
+        ],
+        "correctIndex": 2,
+        "explanation": "Expansion is defined as sudden, explosive displacement away from equilibrium that indicates Market Maker repricing intent."
+      },
+      {
+        "question": "What is the primary institutional purpose of a Retracement?",
+        "options": [
+          "To breach key liquidity pools",
+          "To rebalance inefficiently delivered price action",
+          "To establish a new long-term equilibrium",
+          "To initiate a complete trend reversal"
+        ],
+        "correctIndex": 1,
+        "explanation": "Retracement occurs when order flow moves back inside the newly created price range specifically to rebalance price that was inefficiently delivered."
+      },
+      {
+        "question": "Where are key liquidity pools primarily located according to the IPDA delivery model?",
+        "options": [
+          "At the 50% equilibrium price point",
+          "Inside newly created retracement gaps",
+          "At old highs and old lows",
+          "Exclusively during the expansion phase"
+        ],
+        "correctIndex": 2,
+        "explanation": "Key liquidity pools reside at old highs and old lows; breaching these zones triggers the aggressive reversal phase."
+      }
+    ],
+    "flashcardStats": {
+      "totalReviews": 0,
+      "mastered": 0
+    },
+    "quizStats": {
+      "attempts": 0,
+      "bestScore": 0
+    },
+    "createdAt": "2026-08-15T20:10:40.141Z",
+    "updatedAt": "2026-08-15T20:10:40.141Z"
+  }
+]
