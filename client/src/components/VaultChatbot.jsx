@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import YouTubeIcon from './YouTubeIcon';
 import { apiFetch } from '../api';
+import MarkdownRenderer from './MarkdownRenderer';
 
 export default function VaultChatbot({ 
   documents = [], 
@@ -174,9 +175,13 @@ export default function VaultChatbot({
                   ? 'bg-gruvbox-bg1/90 text-gruvbox-fgLight border-gruvbox-bg2 rounded-tr-none' 
                   : 'glass-panel text-gruvbox-fg border-gruvbox-bg1 rounded-tl-none prose-gruvbox shadow-glass'
               }`}>
-                <div className="whitespace-pre-line">
-                  {msg.content}
-                </div>
+                {isUser ? (
+                  <div className="whitespace-pre-line">
+                    {msg.content}
+                  </div>
+                ) : (
+                  <MarkdownRenderer content={msg.content} />
+                )}
 
                 {msg.sources && msg.sources.length > 0 && !isUser && (
                   <div className="mt-4 pt-3 border-t border-gruvbox-bg1/60 text-[10px] text-gruvbox-gray space-y-1">

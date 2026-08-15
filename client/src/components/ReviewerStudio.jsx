@@ -20,6 +20,7 @@ import {
 import YouTubeIcon from './YouTubeIcon';
 import FlashcardsView from './FlashcardsView';
 import QuizView from './QuizView';
+import MarkdownRenderer from './MarkdownRenderer';
 
 export default function ReviewerStudio({ 
   document, 
@@ -281,9 +282,10 @@ ${(reviewer?.glossary || []).map(g => `- **${g.term}**: ${g.definition}`).join('
                 <span className="text-[11px] font-bold text-gruvbox-yellow uppercase tracking-wider block mb-1.5">
                   Summary
                 </span>
-                <p className="text-xs text-gruvbox-fg leading-relaxed">
-                  {reviewer.executiveSummary}
-                </p>
+                <MarkdownRenderer 
+                  content={reviewer.executiveSummary} 
+                  onWikilinkClick={onConceptClick} 
+                />
               </div>
             )}
 
@@ -381,9 +383,10 @@ ${(reviewer?.glossary || []).map(g => `- **${g.term}**: ${g.definition}`).join('
 
                       {!isCollapsed && (
                         <div className="p-4 space-y-3 border-t border-gruvbox-bg1">
-                          <div className="prose-gruvbox text-xs leading-relaxed space-y-2 whitespace-pre-line">
-                            {section.detailedNotesMarkdown}
-                          </div>
+                          <MarkdownRenderer 
+                            content={section.detailedNotesMarkdown} 
+                            onWikilinkClick={onConceptClick} 
+                          />
 
                           {section.keyTerms && section.keyTerms.length > 0 && (
                             <div className="p-3 rounded-lg bg-gruvbox-bg1/30 border border-gruvbox-bg1 space-y-1.5">
