@@ -37,7 +37,7 @@ export function extractJsonFromText(rawText) {
 }
 
 /**
- * Generate detailed reviewer, flashcards, and concept links
+ * Generate detailed reviewer, flashcards, and concept links with key pooling & model fallback
  * @param {Object} params
  * @param {string} params.title
  * @param {string} params.sourceType
@@ -46,10 +46,11 @@ export function extractJsonFromText(rawText) {
  * @returns {Promise<Object>}
  */
 export async function generateDeepReviewerWithGemini({ title, sourceType, content, extraContext = '' }) {
-  const model = config.selectedModel || 'gemini-3.7-flash';
-  const apiKey = config.geminiApiKey;
+  const primaryModel = config.selectedModel || 'gemini-3.7-flash';
+  const modelsToTry = [primaryModel, config.fallbackModel, 'gemini-2.5-flash'].filter(Boolean);
+  const keysToTry = (config.apiKeys || [config.geminiApiKey]).filter(Boolean);
 
-  if (!apiKey) {
+  if (keysToTry.length === 0) {
     throw new Error('Gemini API key is missing in server configuration.');
   }
 
@@ -142,26 +143,38 @@ Generate the structured JSON reviewer as specified above. Return ONLY the JSON o
     }
   };
 
-  const modelsToTry = [model, config.fallbackModel, 'gemini-2.5-flash'].filter(Boolean);
+  let lastError = null;
 
-  for (let i = 0; i < modelsToTry.length; i++) {
-    const curModel = modelsToTry[i];
-    try {
-      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${curModel}:generateContent?key=${apiKey}`;
-      const response = await axios.post(endpoint, requestBody, {
-        headers: { 'Content-Type': 'application/json' },
-        timeout: 120000
-      });
+  // Try each API key in the pool, and each model
+  for (let k = 0; k < keysToTry.length; k++) {
+    const currentKey = keysToTry[k];
 
-      const responseText = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (responseText) {
-        return extractJsonFromText(responseText);
+    for (let m = 0; m < modelsToTry.length; m++) {
+      const curModel = modelsToTry[m];
+      try {
+        const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${curModel}:generateContent?key=${currentKey}`;
+        const response = await axios.post(endpoint, requestBody, {
+          headers: { 'Content-Type': 'application/json' },
+          timeout: 120000
+        });
+
+        const responseText = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (responseText) {
+          return extractJsonFromText(responseText);
+        }
+      } catch (err) {
+        lastError = err;
+        const status = err.response?.status;
+        console.warn(`[Reviewer Engine] Key ${k+1}/${keysToTry.length} with ${curModel} returned ${status || err.message}`);
+        
+        // If 429 quota exhausted on this key, immediately break to next key
+        if (status === 429) {
+          console.warn(`[Reviewer Engine] Key quota exceeded. Switching to backup key...`);
+          break;
+        }
       }
-    } catch (err) {
-      console.warn(`Attempt with model ${curModel} returned ${err.response?.status || err.message}`);
-      if (i === modelsToTry.length - 1) throw err;
     }
   }
 
-  throw new Error('Failed to generate reviewer across all available models.');
+  throw lastError || new Error('Failed to generate reviewer across all available API keys and models.');
 }

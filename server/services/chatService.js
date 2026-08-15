@@ -3,7 +3,7 @@ import config from '../config.js';
 import * as vaultManager from './vaultManager.js';
 
 /**
- * Query the vault documents and return answers with source citations
+ * Query the vault documents and return answers with source citations using multi-key failover
  * @param {Object} params
  * @param {string} params.message
  * @param {Array<{role: string, content: string}>} params.history
@@ -12,10 +12,10 @@ import * as vaultManager from './vaultManager.js';
  */
 export async function chatWithVault({ message, history = [], scopeDocId = null }) {
   const primaryModel = config.selectedModel || 'gemini-3.7-flash';
-  const fallbackModel = config.fallbackModel || 'gemini-2.5-flash';
-  const apiKey = config.geminiApiKey;
+  const modelsToTry = [primaryModel, config.fallbackModel, 'gemini-2.5-flash'].filter(Boolean);
+  const keysToTry = (config.apiKeys || [config.geminiApiKey]).filter(Boolean);
 
-  if (!apiKey) {
+  if (keysToTry.length === 0) {
     throw new Error('Gemini API key is required to query vault documents.');
   }
 
@@ -115,29 +115,39 @@ ${message}
     }
   };
 
-  const modelsToTry = [primaryModel, fallbackModel, 'gemini-2.5-flash'].filter(Boolean);
+  let lastError = null;
 
-  for (let i = 0; i < modelsToTry.length; i++) {
-    const currentModel = modelsToTry[i];
-    try {
-      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${currentModel}:generateContent?key=${apiKey}`;
-      const response = await axios.post(endpoint, requestBody, {
-        headers: { 'Content-Type': 'application/json' },
-        timeout: 60000
-      });
+  for (let k = 0; k < keysToTry.length; k++) {
+    const currentKey = keysToTry[k];
 
-      const reply = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (reply) {
-        return {
-          reply,
-          sources
-        };
+    for (let i = 0; i < modelsToTry.length; i++) {
+      const currentModel = modelsToTry[i];
+      try {
+        const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${currentModel}:generateContent?key=${currentKey}`;
+        const response = await axios.post(endpoint, requestBody, {
+          headers: { 'Content-Type': 'application/json' },
+          timeout: 60000
+        });
+
+        const reply = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (reply) {
+          return {
+            reply,
+            sources
+          };
+        }
+      } catch (error) {
+        lastError = error;
+        const status = error.response?.status;
+        console.warn(`[Vault Chatbot] Key ${k+1}/${keysToTry.length} with ${currentModel} returned ${status || error.message}`);
+        
+        if (status === 429) {
+          console.warn(`[Vault Chatbot] Key quota exceeded. Switching to backup key...`);
+          break;
+        }
       }
-    } catch (error) {
-      console.warn(`Attempt with ${currentModel} returned ${error.response?.status || error.message}`);
-      if (i === modelsToTry.length - 1) throw error;
     }
   }
 
-  throw new Error('All model attempts failed.');
+  throw lastError || new Error('All model and key attempts failed.');
 }
