@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import YouTubeIcon from './YouTubeIcon';
 import { apiFetch } from '../api';
+import { parsePdfInBrowser } from '../utils/clientPdfParser';
 
 export default function IngestionModal({ 
   isOpen, 
@@ -40,22 +41,60 @@ export default function IngestionModal({
     if (!pdfFile) return;
     setLoading(true);
     setError(null);
-    setStatusMessage('Reading PDF pages...');
+    setStatusMessage('Reading PDF structure in browser...');
 
     try {
-      const formData = new FormData();
-      formData.append('file', pdfFile);
+      // 1. Parse text and extract figures in browser (bypasses all payload size limits)
+      let parsed;
+      try {
+        parsed = await parsePdfInBrowser(pdfFile, (p) => {
+          setStatusMessage(`Extracting page ${p.current} of ${p.total}...`);
+        });
+      } catch (clientParseErr) {
+        console.warn('Browser parser failed, attempting direct upload:', clientParseErr);
+      }
 
-      setTimeout(() => setStatusMessage('Generating study notes and reviewer...'), 1200);
+      let res;
+      if (parsed && parsed.rawText && parsed.rawText.trim().length > 0) {
+        setStatusMessage(`Generating study notes & reviewer (${parsed.wordCount.toLocaleString()} words)...`);
+        
+        res = await apiFetch('/api/ingest-pdf-text', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: parsed.title,
+            rawText: parsed.rawText,
+            numPages: parsed.numPages,
+            wordCount: parsed.wordCount,
+            images: parsed.images || []
+          })
+        });
+      } else {
+        // Fallback to direct upload
+        setStatusMessage('Uploading document for processing...');
+        const formData = new FormData();
+        formData.append('file', pdfFile);
 
-      const res = await apiFetch('/api/upload-pdf', {
-        method: 'POST',
-        body: formData
-      });
+        res = await apiFetch('/api/upload-pdf', {
+          method: 'POST',
+          body: formData
+        });
+      }
+
+      if (!res.ok) {
+        let errText = 'Failed to process PDF';
+        try {
+          const errData = await res.json();
+          errText = errData.error || errText;
+        } catch (_) {
+          errText = `Server responded with status ${res.status}: ${res.statusText}`;
+        }
+        throw new Error(errText);
+      }
 
       const data = await res.json();
-      if (!res.ok || data.error) {
-        throw new Error(data.error || 'Failed to process PDF');
+      if (data.error) {
+        throw new Error(data.error);
       }
 
       setStatusMessage('Indexing concepts and graph nodes...');
@@ -63,9 +102,10 @@ export default function IngestionModal({
         setLoading(false);
         onIngestSuccess(data.document);
         onClose();
-      }, 500);
+      }, 400);
     } catch (err) {
-      setError(err.message);
+      console.error('PDF Ingest failed:', err);
+      setError(err.message || 'Failed to ingest PDF. Please check the file and try again.');
       setLoading(false);
     }
   };
@@ -85,9 +125,20 @@ export default function IngestionModal({
         body: JSON.stringify({ videoUrl: youtubeUrl.trim() })
       });
 
+      if (!res.ok) {
+        let errText = 'Failed to process YouTube video';
+        try {
+          const errData = await res.json();
+          errText = errData.error || errText;
+        } catch (_) {
+          errText = `Server responded with status ${res.status}: ${res.statusText}`;
+        }
+        throw new Error(errText);
+      }
+
       const data = await res.json();
-      if (!res.ok || data.error) {
-        throw new Error(data.error || 'Failed to process YouTube video');
+      if (data.error) {
+        throw new Error(data.error);
       }
 
       setStatusMessage('Indexing concepts...');
@@ -97,7 +148,7 @@ export default function IngestionModal({
         onClose();
       }, 500);
     } catch (err) {
-      setError(err.message);
+      setError(err.message || 'Failed to ingest YouTube video');
       setLoading(false);
     }
   };
@@ -121,16 +172,27 @@ export default function IngestionModal({
         })
       });
 
+      if (!res.ok) {
+        let errText = 'Failed to create note';
+        try {
+          const errData = await res.json();
+          errText = errData.error || errText;
+        } catch (_) {
+          errText = `Server responded with status ${res.status}: ${res.statusText}`;
+        }
+        throw new Error(errText);
+      }
+
       const data = await res.json();
-      if (!res.ok || data.error) {
-        throw new Error(data.error || 'Failed to create note');
+      if (data.error) {
+        throw new Error(data.error);
       }
 
       setLoading(false);
       onIngestSuccess(data.document);
       onClose();
     } catch (err) {
-      setError(err.message);
+      setError(err.message || 'Failed to create note');
       setLoading(false);
     }
   };

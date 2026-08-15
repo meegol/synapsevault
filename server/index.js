@@ -172,6 +172,7 @@ app.post('/api/upload-pdf', upload.single('file'), async (req, res) => {
       sourceUrl: `/uploads/${req.file.filename}`,
       wordCount: pdfData.wordCount,
       rawText: pdfData.rawText,
+      images: pdfData.images || [],
       reviewer,
       tags: reviewer.tags,
       entities: reviewer.entities,
@@ -184,6 +185,47 @@ app.post('/api/upload-pdf', upload.single('file'), async (req, res) => {
   } catch (error) {
     console.error('PDF Upload Error:', error);
     res.status(500).json({ error: error.message || 'Failed to process PDF' });
+  }
+});
+
+// 2b. Direct Ingest of Parsed PDF Text & Figures (Serverless-Safe for large PDFs)
+app.post('/api/ingest-pdf-text', async (req, res) => {
+  try {
+    const { title, rawText, numPages, wordCount, images = [] } = req.body;
+    
+    if (!rawText || rawText.trim().length === 0) {
+      return res.status(400).json({ error: 'No readable text content provided in PDF.' });
+    }
+
+    const cleanTitle = title || 'Uploaded Document';
+    console.log(`[PDF Ingestion] Processing parsed text for "${cleanTitle}" (${wordCount || 0} words, ${images.length} images)...`);
+
+    const reviewer = await processContentToReviewer({
+      title: cleanTitle,
+      sourceType: 'pdf',
+      content: rawText,
+      extraContext: `Page Count: ${numPages || 1}, Words: ${wordCount || 0}`
+    });
+
+    const doc = vaultManager.saveDocument({
+      title: reviewer.title || cleanTitle,
+      type: 'pdf',
+      sourceUrl: '',
+      wordCount: wordCount || rawText.split(/\s+/).filter(Boolean).length,
+      rawText,
+      images: images.slice(0, 15),
+      reviewer,
+      tags: reviewer.tags,
+      entities: reviewer.entities,
+      wikilinks: reviewer.wikilinks,
+      flashcards: reviewer.flashcards,
+      quizQuestions: reviewer.quizQuestions
+    });
+
+    res.json({ success: true, document: doc });
+  } catch (error) {
+    console.error('PDF Text Ingest Error:', error);
+    res.status(500).json({ error: error.message || 'Failed to process document content' });
   }
 });
 

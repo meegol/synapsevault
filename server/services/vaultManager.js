@@ -110,6 +110,7 @@ export function saveDocument(doc) {
     durationFormatted: doc.durationFormatted || null,
     rawText: doc.rawText || '',
     chapters: doc.chapters || [],
+    images: doc.images || [],
     reviewer: doc.reviewer || null,
     tags: doc.tags || doc.reviewer?.tags || [],
     entities: doc.entities || doc.reviewer?.entities || [],
