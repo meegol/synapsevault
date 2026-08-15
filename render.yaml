@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: synapse-vault
+    env: node
+    plan: free
+    buildCommand: cd client && npm install && npm run build && cd ../server && npm install
+    startCommand: cd server && node index.js
+    envVars:
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: DEFAULT_MODEL
+        value: gemini-3.7-flash
+      - key: PORT
+        value: 3001
