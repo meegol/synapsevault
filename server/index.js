@@ -57,7 +57,8 @@ const upload = multer({
 // Helper for generating reviewer using Gemini or NLP Fallback
 async function processContentToReviewer({ title, sourceType, content, extraContext = '' }) {
   try {
-    if (config.provider !== 'local_nlp' && config.geminiApiKey) {
+    const hasKeys = config.apiKeys && config.apiKeys.length > 0 && config.apiKeys[0] !== '';
+    if (config.provider !== 'local_nlp' && hasKeys) {
       console.log(`[Reviewer Engine] Generating deep reviewer for "${title}" via Gemini (${config.selectedModel})...`);
       const reviewer = await generateDeepReviewerWithGemini({
         title,
@@ -65,7 +66,9 @@ async function processContentToReviewer({ title, sourceType, content, extraConte
         content,
         extraContext
       });
-      return reviewer;
+      if (reviewer && reviewer.comprehensiveSections && reviewer.comprehensiveSections.length > 0) {
+        return reviewer;
+      }
     }
   } catch (geminiErr) {
     console.warn(`[Reviewer Engine] Gemini generation error: ${geminiErr.message}. Falling back to Smart NLP Engine...`);
