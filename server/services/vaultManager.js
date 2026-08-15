@@ -16,7 +16,11 @@ let inMemoryDocs = [];
  */
 export async function saveToCloudStorage(docs) {
   if (dbService.isMongoConfigured()) {
-    dbService.syncMongoVault(docs).catch(e => console.warn('Mongo sync notice:', e.message));
+    try {
+      await dbService.syncMongoVault(docs);
+    } catch (e) {
+      console.warn('Mongo sync notice:', e.message);
+    }
   }
   if (!kvUrl || !kvToken) return;
   try {
@@ -142,9 +146,51 @@ ${(doc.reviewer?.flashcards || []).map((f, i) => `### Q${i+1}: ${f.question}\n**
   }
 }
 
-/**
- * Save new or updated document to vault
- */
+export async function saveDocumentAsync(doc) {
+  const docs = await getAllDocumentsAsync();
+  const now = new Date().toISOString();
+
+  const completeDoc = {
+    id: doc.id || `doc-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+    title: doc.title || 'Untitled Document',
+    type: doc.type || 'note',
+    sourceUrl: doc.sourceUrl || '',
+    thumbnailUrl: doc.thumbnailUrl || null,
+    author: doc.author || null,
+    wordCount: doc.wordCount || 0,
+    durationFormatted: doc.durationFormatted || null,
+    rawText: doc.rawText || '',
+    chapters: doc.chapters || [],
+    images: doc.images || [],
+    reviewer: doc.reviewer || null,
+    tags: doc.tags || doc.reviewer?.tags || [],
+    entities: doc.entities || doc.reviewer?.entities || [],
+    wikilinks: doc.wikilinks || doc.reviewer?.wikilinks || [],
+    flashcards: doc.flashcards || doc.reviewer?.flashcards || [],
+    quizQuestions: doc.quizQuestions || doc.reviewer?.quizQuestions || [],
+    flashcardStats: doc.flashcardStats || { totalReviews: 0, mastered: 0 },
+    quizStats: doc.quizStats || { attempts: 0, bestScore: 0 },
+    createdAt: doc.createdAt || now,
+    updatedAt: now
+  };
+
+  const existingIdx = docs.findIndex(d => d.id === completeDoc.id);
+  if (existingIdx >= 0) {
+    docs[existingIdx] = completeDoc;
+  } else {
+    docs.unshift(completeDoc);
+  }
+
+  inMemoryDocs = docs;
+  try {
+    fs.writeFileSync(VAULT_INDEX_FILE, JSON.stringify(inMemoryDocs, null, 2), 'utf-8');
+  } catch (err) {}
+  saveMarkdownFile(completeDoc);
+
+  await saveToCloudStorage(inMemoryDocs);
+  return completeDoc;
+}
+
 export function saveDocument(doc) {
   const docs = readVaultIndex();
   const now = new Date().toISOString();

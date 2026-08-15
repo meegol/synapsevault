@@ -169,7 +169,7 @@ app.post('/api/upload-pdf', upload.single('file'), async (req, res) => {
       extraContext: `Page Count: ${pdfData.numPages}, Words: ${pdfData.wordCount}`
     });
 
-    const doc = vaultManager.saveDocument({
+    const doc = await vaultManager.saveDocumentAsync({
       title: reviewer.title || originalName,
       type: 'pdf',
       sourceUrl: `/uploads/${req.file.filename}`,
@@ -210,7 +210,7 @@ app.post('/api/ingest-pdf-text', async (req, res) => {
       extraContext: `Page Count: ${numPages || 1}, Words: ${wordCount || 0}`
     });
 
-    const doc = vaultManager.saveDocument({
+    const doc = await vaultManager.saveDocumentAsync({
       title: reviewer.title || cleanTitle,
       type: 'pdf',
       sourceUrl: '',
@@ -252,7 +252,7 @@ app.post('/api/fetch-youtube', async (req, res) => {
       extraContext
     });
 
-    const doc = vaultManager.saveDocument({
+    const doc = await vaultManager.saveDocumentAsync({
       title: reviewer.title || ytData.title,
       type: 'youtube',
       sourceUrl: ytData.videoUrl,
@@ -291,7 +291,7 @@ app.post('/api/create-note', async (req, res) => {
       content
     });
 
-    const doc = vaultManager.saveDocument({
+    const doc = await vaultManager.saveDocumentAsync({
       title,
       type: 'note',
       rawText: content,
