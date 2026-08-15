@@ -8,13 +8,20 @@ import IngestionModal from './components/IngestionModal';
 import MobileNav from './components/MobileNav';
 import LockScreen from './components/LockScreen';
 import { apiFetch, getAuthToken, clearAuthToken } from './api';
+import { loadVaultFromLocal, saveVaultToLocal, buildClientKnowledgeGraph } from './utils/vaultStorage';
 
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(Boolean(getAuthToken()));
   const [activeView, setActiveView] = useState('graph'); // 'graph' | 'reviewer' | 'chat'
-  const [documents, setDocuments] = useState([]);
-  const [selectedDocId, setSelectedDocId] = useState(null);
-  const [graphData, setGraphData] = useState({ nodes: [], links: [] });
+  
+  // Persistent document state
+  const [documents, setDocuments] = useState(() => loadVaultFromLocal());
+  const [selectedDocId, setSelectedDocId] = useState(() => {
+    const local = loadVaultFromLocal();
+    return local.length > 0 ? local[0].id : null;
+  });
+  const [graphData, setGraphData] = useState(() => buildClientKnowledgeGraph(loadVaultFromLocal()));
+  
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState('all');
   const [selectedTag, setSelectedTag] = useState(null);
@@ -40,14 +47,14 @@ export default function App() {
         const data = await res.json();
         if (data.authenticated) {
           setIsAuthenticated(true);
-          fetchVaultData();
+          syncVaultWithServer();
         } else {
           clearAuthToken();
           setIsAuthenticated(false);
         }
       } catch (e) {
         setIsAuthenticated(true);
-        fetchVaultData();
+        syncVaultWithServer();
       }
     };
 
@@ -59,32 +66,25 @@ export default function App() {
     return () => window.removeEventListener('vault:lock', handleLockEvent);
   }, []);
 
-  // Fetch documents and graph data from server
-  const fetchVaultData = async () => {
-    try {
-      const [docsRes, graphRes] = await Promise.all([
-        apiFetch('/api/documents'),
-        apiFetch('/api/graph')
-      ]);
-
-      const docsData = await docsRes.json();
-      const graphJson = await graphRes.json();
-
-      setDocuments(docsData.documents || []);
-      setGraphData(graphJson || { nodes: [], links: [] });
-
-      // Default select first doc if none selected
-      if (!selectedDocId && docsData.documents && docsData.documents.length > 0) {
-        setSelectedDocId(docsData.documents[0].id);
+  // Sync local persistent documents to server lambda session
+  const syncVaultWithServer = async () => {
+    const localDocs = loadVaultFromLocal();
+    if (localDocs.length > 0) {
+      try {
+        await apiFetch('/api/sync-vault', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ documents: localDocs })
+        });
+      } catch (e) {
+        // Safe offline / background sync
       }
-    } catch (err) {
-      console.error('Failed to load vault data:', err);
     }
   };
 
   const handleUnlock = (token) => {
     setIsAuthenticated(true);
-    fetchVaultData();
+    syncVaultWithServer();
   };
 
   const handleLockVault = async () => {
@@ -105,22 +105,34 @@ export default function App() {
     try {
       setDocuments(prev => {
         const next = prev.filter(d => d.id !== docId);
+        saveVaultToLocal(next);
+        setGraphData(buildClientKnowledgeGraph(next));
         if (selectedDocId === docId) {
           setSelectedDocId(next.length > 0 ? next[0].id : null);
         }
         return next;
       });
+
       await apiFetch(`/api/documents/${docId}`, { method: 'DELETE' });
-      fetchVaultData();
     } catch (err) {
       console.error('Failed to delete document:', err);
     }
   };
 
   const handleIngestSuccess = (newDoc) => {
-    fetchVaultData();
+    setDocuments(prev => {
+      const filtered = prev.filter(d => d.id !== newDoc.id);
+      const updated = [newDoc, ...filtered];
+      saveVaultToLocal(updated);
+      setGraphData(buildClientKnowledgeGraph(updated));
+      return updated;
+    });
+
     setSelectedDocId(newDoc.id);
     setActiveView('reviewer');
+
+    // Sync to server
+    setTimeout(syncVaultWithServer, 200);
   };
 
   const handleOpenIngestion = (tab = 'pdf') => {
@@ -130,9 +142,14 @@ export default function App() {
 
   const handleExportVault = async () => {
     try {
-      const res = await apiFetch('/api/export-vault');
-      const data = await res.json();
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const localDocs = loadVaultFromLocal();
+      const exportData = {
+        exportedAt: new Date().toISOString(),
+        version: "1.0.0",
+        totalDocuments: localDocs.length,
+        documents: localDocs
+      };
+      const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -158,13 +175,30 @@ export default function App() {
 
   const handleFlashcardReview = async (cardIndex, isMastered) => {
     if (!selectedDocId) return;
+    setDocuments(prev => {
+      const updated = prev.map(d => {
+        if (d.id === selectedDocId) {
+          const stats = d.flashcardStats || { totalReviews: 0, mastered: 0 };
+          return {
+            ...d,
+            flashcardStats: {
+              totalReviews: stats.totalReviews + 1,
+              mastered: isMastered ? stats.mastered + 1 : stats.mastered
+            }
+          };
+        }
+        return d;
+      });
+      saveVaultToLocal(updated);
+      return updated;
+    });
+
     try {
       await apiFetch(`/api/documents/${selectedDocId}/flashcard-update`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ cardIndex, isMastered })
       });
-      fetchVaultData();
     } catch (err) {
       console.error('Failed to update flashcard:', err);
     }
@@ -172,13 +206,31 @@ export default function App() {
 
   const handleQuizComplete = async (score, totalQuestions) => {
     if (!selectedDocId) return;
+    const percentage = Math.round((score / totalQuestions) * 100);
+    setDocuments(prev => {
+      const updated = prev.map(d => {
+        if (d.id === selectedDocId) {
+          const stats = d.quizStats || { attempts: 0, bestScore: 0 };
+          return {
+            ...d,
+            quizStats: {
+              attempts: stats.attempts + 1,
+              bestScore: Math.max(stats.bestScore, percentage)
+            }
+          };
+        }
+        return d;
+      });
+      saveVaultToLocal(updated);
+      return updated;
+    });
+
     try {
       await apiFetch(`/api/documents/${selectedDocId}/quiz-result`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ score, totalQuestions })
       });
-      fetchVaultData();
     } catch (err) {
       console.error('Failed to record quiz result:', err);
     }

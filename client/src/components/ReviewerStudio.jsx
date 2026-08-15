@@ -489,7 +489,7 @@ ${(reviewer?.glossary || []).map(g => `- **${g.term}**: ${g.definition}`).join('
                   className="glass-panel rounded-xl overflow-hidden border border-gruvbox-bg1 group cursor-pointer hover:border-gruvbox-aqua transition-colors flex flex-col"
                   onClick={() => setActiveLightboxImg(img)}
                 >
-                  <div className="relative aspect-video bg-black/40 overflow-hidden flex items-center justify-center">
+                  <div className="relative aspect-video bg-black/40 overflow-hidden flex items-center justify-center p-2">
                     <img
                       src={img.dataUrl}
                       alt={img.name}
@@ -499,11 +499,18 @@ ${(reviewer?.glossary || []).map(g => `- **${g.term}**: ${g.definition}`).join('
                       <ZoomIn className="w-5 h-5 text-gruvbox-fgLight" />
                     </div>
                   </div>
-                  <div className="p-3 flex items-center justify-between border-t border-gruvbox-bg1 bg-gruvbox-bg/50">
-                    <span className="text-xs font-bold text-gruvbox-fg">{img.name}</span>
-                    <span className="text-[10px] text-gruvbox-gray">
-                      {(img.sizeBytes / 1024).toFixed(1)} KB
-                    </span>
+                  <div className="p-3 flex flex-col gap-1 border-t border-gruvbox-bg1 bg-gruvbox-bg/50">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-gruvbox-fgLight truncate">{img.name}</span>
+                      <span className="text-[10px] text-gruvbox-gray flex-shrink-0">
+                        {(img.sizeBytes / 1024).toFixed(1)} KB
+                      </span>
+                    </div>
+                    {img.caption && img.caption !== img.name && (
+                      <p className="text-[10px] text-gruvbox-fgDim line-clamp-2 leading-relaxed">
+                        {img.caption}
+                      </p>
+                    )}
                   </div>
                 </div>
               ))}
@@ -597,15 +604,20 @@ ${(reviewer?.glossary || []).map(g => `- **${g.term}**: ${g.definition}`).join('
             onClick={(e) => e.stopPropagation()}
           >
             <div className="p-3 px-4 border-b border-gruvbox-bg1 flex items-center justify-between bg-gruvbox-bg/60">
-              <span className="text-xs font-bold text-gruvbox-fgLight">{activeLightboxImg.name}</span>
+              <div className="min-w-0">
+                <span className="text-xs font-bold text-gruvbox-fgLight truncate block">{activeLightboxImg.name}</span>
+                {activeLightboxImg.caption && (
+                  <p className="text-[11px] text-gruvbox-fgDim truncate mt-0.5">{activeLightboxImg.caption}</p>
+                )}
+              </div>
               <button
                 onClick={() => setActiveLightboxImg(null)}
-                className="p-1 rounded hover:bg-gruvbox-bg1 text-gruvbox-gray hover:text-gruvbox-fg"
+                className="p-1 rounded hover:bg-gruvbox-bg1 text-gruvbox-gray hover:text-gruvbox-fg ml-3 flex-shrink-0"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
-            <div className="p-4 overflow-auto max-h-[calc(90vh-4rem)] flex items-center justify-center bg-black/40">
+            <div className="p-4 overflow-auto max-h-[calc(90vh-6rem)] flex items-center justify-center bg-black/40">
               <img
                 src={activeLightboxImg.dataUrl}
                 alt={activeLightboxImg.name}

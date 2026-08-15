@@ -1,11 +1,60 @@
 import fs from 'fs';
 import path from 'path';
 import config from '../config.js';
+import * as dbService from './dbService.js';
 
 const VAULT_INDEX_FILE = path.join(config.vaultDir, 'vault_index.json');
 
+const kvUrl = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
+const kvToken = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
+
 // In-memory cache starting completely empty
 let inMemoryDocs = [];
+
+/**
+ * Async save to Vercel KV or MongoDB Atlas if attached
+ */
+export async function saveToCloudStorage(docs) {
+  if (dbService.isMongoConfigured()) {
+    dbService.syncMongoVault(docs).catch(e => console.warn('Mongo sync notice:', e.message));
+  }
+  if (!kvUrl || !kvToken) return;
+  try {
+    await fetch(`${kvUrl}/set/synapse_vault_docs`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${kvToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(docs)
+    });
+  } catch (err) {
+    console.warn('Cloud KV write notice:', err.message);
+  }
+}
+
+/**
+ * Async load from Vercel KV / Upstash Redis if attached
+ */
+export async function loadFromCloudKV() {
+  if (!kvUrl || !kvToken) return null;
+  try {
+    const res = await fetch(`${kvUrl}/get/synapse_vault_docs`, {
+      headers: { Authorization: `Bearer ${kvToken}` }
+    });
+    const data = await res.json();
+    if (data && data.result) {
+      const parsed = typeof data.result === 'string' ? JSON.parse(data.result) : data.result;
+      if (Array.isArray(parsed)) {
+        inMemoryDocs = parsed;
+        return parsed;
+      }
+    }
+  } catch (err) {
+    console.warn('Cloud KV read notice:', err.message);
+  }
+  return null;
+}
 
 /**
  * Read JSON vault index
@@ -42,6 +91,7 @@ function writeVaultIndex(items) {
   } catch (err) {
     console.warn('Notice: Vault index saved to memory cache.');
   }
+  saveToCloudStorage(inMemoryDocs);
 }
 
 /**
@@ -138,6 +188,13 @@ export function saveDocument(doc) {
 
 export function getAllDocuments() {
   return readVaultIndex();
+}
+
+export function syncVault(incomingDocs) {
+  if (!Array.isArray(incomingDocs)) return readVaultIndex();
+  writeVaultIndex(incomingDocs);
+  incomingDocs.forEach(d => saveMarkdownFile(d));
+  return incomingDocs;
 }
 
 export function getDocumentById(id) {

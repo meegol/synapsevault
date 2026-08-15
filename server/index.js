@@ -331,6 +331,13 @@ app.delete('/api/documents/:id', (req, res) => {
   res.json({ success: true });
 });
 
+// Sync client persistent vault to server session
+app.post('/api/sync-vault', (req, res) => {
+  const { documents } = req.body;
+  const synced = vaultManager.syncVault(documents);
+  res.json({ success: true, count: synced.length });
+});
+
 // 6. Obsidian Knowledge Graph
 app.get('/api/graph', (req, res) => {
   const graph = vaultManager.getKnowledgeGraphData();

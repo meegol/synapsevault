@@ -42,7 +42,9 @@ function extractJpegsFromArrayBuffer(arrayBuffer) {
           
           images.push({
             id: `fig-${imgIndex}`,
+            figureNumber: imgIndex,
             name: `Figure ${imgIndex}`,
+            caption: '',
             dataUrl: `data:image/jpeg;base64,${base64}`,
             sizeBytes
           });
@@ -58,7 +60,28 @@ function extractJpegsFromArrayBuffer(arrayBuffer) {
 }
 
 /**
- * Parse PDF in browser using PDF.js
+ * Extract figure captions from raw text
+ * @param {string} text 
+ * @returns {Map<number, string>}
+ */
+function extractFigureCaptionsFromText(text) {
+  const captionMap = new Map();
+  const figureRegex = /(?:Figure|Fig\.?|Diagram)\s*(\d+)[\s.:\-—]+([^\n\r]{8,140})/gi;
+  let match;
+  
+  while ((match = figureRegex.exec(text)) !== null) {
+    const figNum = parseInt(match[1], 10);
+    const captionRaw = match[2].trim().replace(/[.;,]+$/, '');
+    if (figNum > 0 && captionRaw && !captionMap.has(figNum)) {
+      captionMap.set(figNum, captionRaw);
+    }
+  }
+
+  return captionMap;
+}
+
+/**
+ * Parse PDF in browser using PDF.js with smart figure caption matching
  * @param {File} file 
  * @param {(progress: { current: number, total: number }) => void} [onProgress]
  * @returns {Promise<{title: string, rawText: string, numPages: number, wordCount: number, images: Array<Object>}>}
@@ -106,6 +129,20 @@ export async function parsePdfInBrowser(file, onProgress) {
   const rawText = textPieces.filter(Boolean).join('\n\n');
   const wordCount = rawText.split(/\s+/).filter(Boolean).length;
   const cleanTitle = file.name.replace(/\.pdf$/i, '').replace(/[-_]/g, ' ');
+
+  // Match captions to figures
+  const captionMap = extractFigureCaptionsFromText(rawText);
+  images.forEach((img, idx) => {
+    const figNum = idx + 1;
+    if (captionMap.has(figNum)) {
+      const cap = captionMap.get(figNum);
+      img.name = `Fig. ${figNum}: ${cap.length > 45 ? cap.slice(0, 45) + '…' : cap}`;
+      img.caption = `Figure ${figNum}: ${cap}`;
+    } else {
+      img.name = `Figure ${figNum} (${cleanTitle})`;
+      img.caption = `Extracted diagram ${figNum} from ${cleanTitle}`;
+    }
+  });
 
   return {
     title: cleanTitle,
