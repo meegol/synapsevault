@@ -11,8 +11,13 @@ import * as vaultManager from './vaultManager.js';
  * @returns {Promise<{reply: string, sources: Array<Object>}>}
  */
 export async function chatWithVault({ message, history = [], scopeDocId = null }) {
-  const primaryModel = config.selectedModel || 'gemini-2.5-flash';
-  const modelsToTry = [primaryModel, 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'].filter(Boolean);
+  const modelsToTry = [
+    'gemini-2.5-flash-lite',
+    'gemini-flash-latest',
+    'gemini-3.5-flash-lite',
+    'gemini-2.5-flash',
+    'gemini-3.5-flash'
+  ];
   const keysToTry = (config.apiKeys || [config.geminiApiKey]).filter(Boolean);
 
   if (keysToTry.length === 0) {

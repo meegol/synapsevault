@@ -48,8 +48,13 @@ export function extractJsonFromText(rawText) {
 import { sanitizeDocumentText } from '../utils/textSanitizer.js';
 
 export async function generateDeepReviewerWithGemini({ title, sourceType, content, extraContext = '' }) {
-  const primaryModel = config.selectedModel || 'gemini-2.5-flash';
-  const modelsToTry = [primaryModel, 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'].filter(Boolean);
+  const modelsToTry = [
+    'gemini-2.5-flash-lite',
+    'gemini-flash-latest',
+    'gemini-3.5-flash-lite',
+    'gemini-2.5-flash',
+    'gemini-3.5-flash'
+  ];
   const keysToTry = (config.apiKeys || [config.geminiApiKey]).filter(Boolean);
 
   if (keysToTry.length === 0) {
@@ -144,14 +149,12 @@ Generate the structured JSON reviewer as specified above. Return ONLY the JSON o
     contents: [
       {
         parts: [
-          { text: systemInstructions },
-          { text: prompt }
+          { text: systemInstructions + '\n\n' + prompt }
         ]
       }
     ],
     generationConfig: {
       temperature: 0.2,
-      topP: 0.95,
       responseMimeType: "application/json"
     }
   };
@@ -179,12 +182,6 @@ Generate the structured JSON reviewer as specified above. Return ONLY the JSON o
         lastError = err;
         const status = err.response?.status;
         console.warn(`[Reviewer Engine] Key ${k+1}/${keysToTry.length} with ${curModel} returned ${status || err.message}`);
-        
-        // If 429 quota exhausted on this key, immediately break to next key
-        if (status === 429) {
-          console.warn(`[Reviewer Engine] Key quota exceeded. Switching to backup key...`);
-          break;
-        }
       }
     }
   }
