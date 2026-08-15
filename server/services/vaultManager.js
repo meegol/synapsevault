@@ -190,6 +190,19 @@ export function getAllDocuments() {
   return readVaultIndex();
 }
 
+export async function getAllDocumentsAsync() {
+  if (inMemoryDocs.length === 0 && dbService.isMongoConfigured()) {
+    try {
+      const mongoDocs = await dbService.getMongoDocs();
+      if (mongoDocs && mongoDocs.length > 0) {
+        inMemoryDocs = mongoDocs;
+        return inMemoryDocs;
+      }
+    } catch (e) {}
+  }
+  return readVaultIndex();
+}
+
 export function syncVault(incomingDocs) {
   if (!Array.isArray(incomingDocs)) return readVaultIndex();
   writeVaultIndex(incomingDocs);

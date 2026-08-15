@@ -309,8 +309,8 @@ app.post('/api/create-note', async (req, res) => {
 });
 
 // 5. Document List & Detail
-app.get('/api/documents', (req, res) => {
-  const docs = vaultManager.getAllDocuments();
+app.get('/api/documents', async (req, res) => {
+  const docs = await vaultManager.getAllDocumentsAsync();
   res.json({ documents: docs });
 });
 
