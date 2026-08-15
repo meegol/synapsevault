@@ -27,3 +27,5 @@ Thumbs.db
 # Temp uploads
 server/uploads/*
 !server/uploads/.gitkeep
+
+.vercel
