@@ -1,65 +1,82 @@
 import crypto from 'crypto';
 
-// In-memory active tokens set (or persistent cache)
-const activeSessions = new Map(); // token -> { createdAt, expiresAt }
-
-// Default vault password: 'migol'
+// Vault master password
 const VAULT_PASSWORD = process.env.VAULT_PASSWORD || 'migol';
 
+// Secret key for HMAC token signing (falls back to stable internal salt)
+const TOKEN_SECRET = process.env.TOKEN_SECRET || 'synapse_vault_migol_hmac_secret_2026';
+const SERVER_SALT = 'synapse_vault_migol_secure_salt_2026';
+
 /**
- * Hash password with salt
+ * Hash password with PBKDF2
  */
 function hashPassword(password, salt) {
   return crypto.pbkdf2Sync(password, salt, 100000, 32, 'sha256').toString('hex');
 }
 
-const SERVER_SALT = 'synapse_vault_migol_secure_salt_2026';
 const EXPECTED_HASH = hashPassword(VAULT_PASSWORD, SERVER_SALT);
 
 /**
- * Validate password and issue a secure session token
+ * Validate password and issue a stateless, HMAC-signed session token
  * @param {string} inputPassword 
  * @returns {string|null} token or null
  */
 export function authenticate(inputPassword) {
   if (!inputPassword || typeof inputPassword !== 'string') return null;
 
+  const currentExpected = hashPassword(process.env.VAULT_PASSWORD || 'migol', SERVER_SALT);
   const inputHash = hashPassword(inputPassword, SERVER_SALT);
   
   // Constant time comparison to prevent timing attacks
   const isMatch = crypto.timingSafeEqual(
     Buffer.from(inputHash, 'hex'),
-    Buffer.from(EXPECTED_HASH, 'hex')
+    Buffer.from(currentExpected, 'hex')
   );
 
   if (!isMatch) return null;
 
-  // Issue random cryptographically secure token
-  const token = crypto.randomBytes(32).toString('hex');
-  const now = Date.now();
-  const expiresAt = now + (30 * 24 * 60 * 60 * 1000); // 30 days session
+  // Issue stateless HMAC-signed token: timestamp.signature
+  const timestamp = Date.now().toString();
+  const signature = crypto
+    .createHmac('sha256', TOKEN_SECRET)
+    .update(timestamp)
+    .digest('hex');
 
-  activeSessions.set(token, {
-    createdAt: now,
-    expiresAt
-  });
-
-  return token;
+  return `${timestamp}.${signature}`;
 }
 
 /**
- * Verify session token
+ * Verify HMAC-signed session token
  * @param {string} token 
  * @returns {boolean}
  */
 export function verifyToken(token) {
-  if (!token) return false;
+  if (!token || typeof token !== 'string') return false;
   
-  const session = activeSessions.get(token);
-  if (!session) return false;
+  const parts = token.split('.');
+  if (parts.length !== 2) return false;
 
-  if (Date.now() > session.expiresAt) {
-    activeSessions.delete(token);
+  const [timestampStr, signature] = parts;
+  const timestamp = parseInt(timestampStr, 10);
+
+  if (isNaN(timestamp)) return false;
+
+  // Verify signature
+  const expectedSignature = crypto
+    .createHmac('sha256', TOKEN_SECRET)
+    .update(timestampStr)
+    .digest('hex');
+
+  const isMatch = crypto.timingSafeEqual(
+    Buffer.from(signature, 'hex'),
+    Buffer.from(expectedSignature, 'hex')
+  );
+
+  if (!isMatch) return false;
+
+  // Check 30-day expiration
+  const maxAge = 30 * 24 * 60 * 60 * 1000;
+  if (Date.now() - timestamp > maxAge) {
     return false;
   }
 
@@ -67,11 +84,10 @@ export function verifyToken(token) {
 }
 
 /**
- * Invalidate session (Logout)
- * @param {string} token 
+ * Invalidate session
  */
 export function invalidateToken(token) {
-  if (token) activeSessions.delete(token);
+  // Stateless token
 }
 
 /**
