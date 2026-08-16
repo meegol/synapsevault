@@ -49,11 +49,8 @@ import { sanitizeDocumentText } from '../utils/textSanitizer.js';
 
 export async function generateDeepReviewerWithGemini({ title, sourceType, content, extraContext = '' }) {
   const modelsToTry = [
-    'gemini-2.5-flash-lite',
-    'gemini-flash-latest',
-    'gemini-3.5-flash-lite',
     'gemini-2.5-flash',
-    'gemini-3.5-flash'
+    'gemini-2.5-flash-lite'
   ];
   const keysToTry = (config.apiKeys || [config.geminiApiKey]).filter(Boolean);
 

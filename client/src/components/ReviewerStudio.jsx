@@ -1,78 +1,140 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   BookOpen, 
-  Layers, 
-  Award, 
-  Play, 
+  Edit3, 
+  Eye, 
+  Sparkles, 
   Clock, 
   Download, 
   Copy, 
   Check, 
   FileText, 
   Hash, 
-  ChevronDown, 
-  ChevronUp, 
-  Trash2,
-  Image as ImageIcon,
-  ZoomIn,
-  X
+  Trash2, 
+  Image as ImageIcon, 
+  ZoomIn, 
+  X,
+  Play,
+  Layers,
+  Award,
+  Save,
+  Loader2
 } from 'lucide-react';
 import YouTubeIcon from './YouTubeIcon';
 import FlashcardsView from './FlashcardsView';
 import QuizView from './QuizView';
 import MarkdownRenderer from './MarkdownRenderer';
+import { apiFetch } from '../api';
 
 export default function ReviewerStudio({ 
   document, 
   onDeleteDoc, 
+  onUpdateDoc,
   onTagClick, 
   onConceptClick, 
   onFlashcardReview,
   onQuizComplete
 }) {
-  const [activeTab, setActiveTab] = useState('reviewer'); // 'reviewer' | 'figures' | 'flashcards' | 'quiz' | 'source'
+  const [activeTab, setActiveTab] = useState('note'); // 'note' | 'figures' | 'video' | 'ai_summary' | 'flashcards' | 'quiz'
+  const [isEditing, setIsEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState('');
+  const [editContent, setEditContent] = useState('');
+  const [editTags, setEditTags] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+
   const [copied, setCopied] = useState(false);
-  const [expandedSections, setExpandedSections] = useState({});
   const [currentYtTime, setCurrentYtTime] = useState(0);
   const [activeLightboxImg, setActiveLightboxImg] = useState(null);
+  const [isSummarizing, setIsSummarizing] = useState(false);
+
+  useEffect(() => {
+    if (document) {
+      setEditTitle(document.title || '');
+      setEditContent(document.rawText || '');
+      setEditTags((document.tags || []).join(', '));
+      setIsEditing(false);
+      setActiveTab('note');
+    }
+  }, [document?.id]);
 
   if (!document) {
     return (
       <div className="flex-1 h-full flex flex-col items-center justify-center p-12 text-center select-none font-mono">
         <BookOpen className="w-10 h-10 text-gruvbox-gray mb-3 opacity-40" />
-        <h3 className="text-sm font-bold text-gruvbox-fg">No Document Selected</h3>
+        <h3 className="text-sm font-bold text-gruvbox-fg">No Note Selected</h3>
         <p className="text-xs text-gruvbox-gray mt-1 max-w-sm">
-          Select a note from the left sidebar or click a node in the graph to view its reviewer.
+          Select a document from the vault library or click a concept node in the Knowledge Graph.
         </p>
       </div>
     );
   }
 
-  const { reviewer, type, title, sourceUrl, author, durationFormatted, wordCount, chapters, images = [] } = document;
+  const { reviewer, type, title, sourceUrl, author, durationFormatted, wordCount, chapters, images = [], flashcards = [], quizQuestions = [] } = document;
 
   const isPdf = type === 'pdf';
   const isYt = type === 'youtube';
 
-  const toggleSection = (idx) => {
-    setExpandedSections(prev => ({
-      ...prev,
-      [idx]: prev[idx] === undefined ? false : !prev[idx]
-    }));
+  const handleSaveNote = async () => {
+    setIsSaving(true);
+    try {
+      const parsedTags = editTags
+        .split(',')
+        .map(t => t.trim().replace(/^#/, ''))
+        .filter(Boolean);
+
+      const res = await apiFetch(`/api/documents/${document.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: editTitle,
+          rawText: editContent,
+          tags: parsedTags
+        })
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.document && onUpdateDoc) {
+          onUpdateDoc(data.document);
+        }
+      }
+      setIsEditing(false);
+    } catch (err) {
+      console.error('Failed to save note:', err);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleSummarizeWithAI = async () => {
+    setIsSummarizing(true);
+    try {
+      const res = await apiFetch(`/api/documents/${document.id}/summarize`, {
+        method: 'POST'
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.document && onUpdateDoc) {
+          onUpdateDoc(data.document);
+          setActiveTab('ai_summary');
+        }
+      }
+    } catch (err) {
+      console.error('Failed to generate AI summary:', err);
+    } finally {
+      setIsSummarizing(false);
+    }
   };
 
   const handleCopyNotes = () => {
-    let textToCopy = `# ${title}\n\n## Summary\n${reviewer?.executiveSummary || ''}\n\n## Key Takeaways\n${(reviewer?.keyTakeaways || []).join('\n- ')}\n\n`;
-    (reviewer?.comprehensiveSections || []).forEach(s => {
-      textToCopy += `### ${s.sectionTitle}\n${s.detailedNotesMarkdown}\n\n`;
-    });
-
+    const textToCopy = `# ${title}\n\n${document.rawText || ''}`;
     navigator.clipboard.writeText(textToCopy);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
   const handleDownloadMarkdown = () => {
-    let md = `---
+    const md = `---
 title: "${title}"
 type: "${type}"
 tags: [${(document.tags || []).map(t => `"#${t.replace(/^#/, '')}"`).join(', ')}]
@@ -81,20 +143,7 @@ date: "${document.createdAt}"
 
 # ${title}
 
-## Summary
-${reviewer?.executiveSummary || ''}
-
-## Key Takeaways
-${(reviewer?.keyTakeaways || []).map(t => `- ${t}`).join('\n')}
-
-## Study Sections
-${(reviewer?.comprehensiveSections || []).map(s => `
-### ${s.sectionTitle}
-${s.detailedNotesMarkdown}
-`).join('\n\n')}
-
-## Glossary
-${(reviewer?.glossary || []).map(g => `- **${g.term}**: ${g.definition}`).join('\n')}
+${document.rawText || ''}
 `;
 
     const blob = new Blob([md], { type: 'text/markdown' });
@@ -117,7 +166,7 @@ ${(reviewer?.glossary || []).map(g => `- **${g.term}**: ${g.definition}`).join('
   return (
     <div className="flex-1 h-full min-h-0 flex flex-col bg-gruvbox-bgHard font-mono overflow-hidden">
       
-      {/* Top Header */}
+      {/* Obsidian Vault Header */}
       <div className="p-4 md:px-6 border-b border-gruvbox-bg1 bg-gruvbox-bgHard/90 backdrop-blur-md flex flex-col md:flex-row md:items-center justify-between gap-3 select-none flex-shrink-0">
         <div className="flex items-start gap-3 min-w-0">
           <div className={`p-2 rounded-lg mt-0.5 flex-shrink-0 ${
@@ -128,7 +177,7 @@ ${(reviewer?.glossary || []).map(g => `- **${g.term}**: ${g.definition}`).join('
             {isPdf ? <FileText className="w-4 h-4" /> : isYt ? <YouTubeIcon className="w-4 h-4" /> : <BookOpen className="w-4 h-4" />}
           </div>
 
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-[10px] uppercase font-bold px-1.5 py-0.5 rounded bg-gruvbox-bg1 text-gruvbox-gray">
                 {type}
@@ -151,29 +200,81 @@ ${(reviewer?.glossary || []).map(g => `- **${g.term}**: ${g.definition}`).join('
               )}
             </div>
 
-            <h1 className="text-sm md:text-base font-bold text-gruvbox-fgLight truncate mt-1">
-              {title}
-            </h1>
+            {isEditing ? (
+              <input
+                type="text"
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
+                className="w-full text-base font-bold text-gruvbox-fgLight bg-gruvbox-bg border border-gruvbox-bg2 rounded px-2 py-1 mt-1 focus:outline-none focus:border-gruvbox-yellow"
+                placeholder="Note Title..."
+              />
+            ) : (
+              <h1 className="text-sm md:text-base font-bold text-gruvbox-fgLight truncate mt-1">
+                {title}
+              </h1>
+            )}
 
-            {document.tags && document.tags.length > 0 && (
-              <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
-                {document.tags.map(tag => (
-                  <button
-                    key={tag}
-                    onClick={() => onTagClick && onTagClick(tag)}
-                    className="text-[10px] px-2 py-0.5 rounded-full bg-gruvbox-bg1 hover:bg-gruvbox-aqua/20 text-gruvbox-aqua border border-gruvbox-aqua/20 transition-colors flex items-center gap-0.5"
-                  >
-                    <Hash className="w-2.5 h-2.5" />
-                    {tag.replace(/^#/, '')}
-                  </button>
-                ))}
-              </div>
+            {/* Tags */}
+            {isEditing ? (
+              <input
+                type="text"
+                value={editTags}
+                onChange={(e) => setEditTags(e.target.value)}
+                className="w-full text-xs text-gruvbox-aqua bg-gruvbox-bg border border-gruvbox-bg2 rounded px-2 py-0.5 mt-1.5 focus:outline-none"
+                placeholder="Tags (comma separated: risk, trading, chart)..."
+              />
+            ) : (
+              document.tags && document.tags.length > 0 && (
+                <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                  {document.tags.map(tag => (
+                    <button
+                      key={tag}
+                      onClick={() => onTagClick && onTagClick(tag)}
+                      className="text-[10px] px-2 py-0.5 rounded-full bg-gruvbox-bg1 hover:bg-gruvbox-aqua/20 text-gruvbox-aqua border border-gruvbox-aqua/20 transition-colors flex items-center gap-0.5"
+                    >
+                      <Hash className="w-2.5 h-2.5" />
+                      {tag.replace(/^#/, '')}
+                    </button>
+                  ))}
+                </div>
+              )
             )}
           </div>
         </div>
 
-        {/* Actions */}
+        {/* Action Toolbar */}
         <div className="flex items-center gap-2 flex-shrink-0">
+          {isEditing ? (
+            <button
+              onClick={handleSaveNote}
+              disabled={isSaving}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gruvbox-green hover:bg-gruvbox-green/80 text-gruvbox-bgHard font-bold text-xs transition-colors"
+            >
+              {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+              <span>Save Note</span>
+            </button>
+          ) : (
+            <button
+              onClick={() => setIsEditing(true)}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-gruvbox-bg hover:bg-gruvbox-bg1 border border-gruvbox-bg1 text-xs text-gruvbox-fg transition-colors"
+              title="Edit Note Content"
+            >
+              <Edit3 className="w-3.5 h-3.5 text-gruvbox-yellow" />
+              <span>Edit</span>
+            </button>
+          )}
+
+          {/* Optional On-Demand AI Summary Trigger */}
+          <button
+            onClick={handleSummarizeWithAI}
+            disabled={isSummarizing}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-gruvbox-purple/20 hover:bg-gruvbox-purple/30 border border-gruvbox-purple/40 text-xs text-gruvbox-purple transition-colors"
+            title="Generate AI Reviewer on demand"
+          >
+            {isSummarizing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+            <span className="hidden sm:inline">Summarize with AI</span>
+          </button>
+
           <button
             onClick={handleCopyNotes}
             className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-gruvbox-bg hover:bg-gruvbox-bg1 border border-gruvbox-bg1 text-xs text-gruvbox-fg transition-colors"
@@ -194,33 +295,33 @@ ${(reviewer?.glossary || []).map(g => `- **${g.term}**: ${g.definition}`).join('
 
           <button
             onClick={() => {
-              if (confirm(`Delete "${title}"?`)) onDeleteDoc(document.id);
+              if (confirm(`Delete "${title}" from vault?`)) onDeleteDoc(document.id);
             }}
             className="p-1.5 rounded-lg bg-gruvbox-bg hover:bg-gruvbox-red/20 border border-gruvbox-bg1 text-gruvbox-gray hover:text-gruvbox-red transition-colors"
-            title="Delete"
+            title="Delete Document"
           >
             <Trash2 className="w-3.5 h-3.5" />
           </button>
         </div>
       </div>
 
-      {/* Tabs */}
+      {/* Obsidian Vault Tabs */}
       <div className="px-4 md:px-6 border-b border-gruvbox-bg1 bg-gruvbox-bg/40 flex items-center gap-1 select-none overflow-x-auto flex-shrink-0">
         <button
-          onClick={() => setActiveTab('reviewer')}
+          onClick={() => { setActiveTab('note'); setIsEditing(false); }}
           className={`flex items-center gap-1.5 py-2.5 px-3.5 text-xs font-semibold border-b-2 transition-colors ${
-            activeTab === 'reviewer'
+            activeTab === 'note' && !isEditing
               ? 'border-gruvbox-yellow text-gruvbox-yellow'
               : 'border-transparent text-gruvbox-gray hover:text-gruvbox-fg'
           }`}
         >
           <BookOpen className="w-3.5 h-3.5" />
-          Study Notes
+          Note Content
         </button>
 
         {images.length > 0 && (
           <button
-            onClick={() => setActiveTab('figures')}
+            onClick={() => { setActiveTab('figures'); setIsEditing(false); }}
             className={`flex items-center gap-1.5 py-2.5 px-3.5 text-xs font-semibold border-b-2 transition-colors ${
               activeTab === 'figures'
                 ? 'border-gruvbox-aqua text-gruvbox-aqua'
@@ -228,245 +329,126 @@ ${(reviewer?.glossary || []).map(g => `- **${g.term}**: ${g.definition}`).join('
             }`}
           >
             <ImageIcon className="w-3.5 h-3.5" />
-            Figures & Diagrams ({images.length})
+            Figures ({images.length})
           </button>
         )}
 
-        <button
-          onClick={() => setActiveTab('flashcards')}
-          className={`flex items-center gap-1.5 py-2.5 px-3.5 text-xs font-semibold border-b-2 transition-colors ${
-            activeTab === 'flashcards'
-              ? 'border-gruvbox-purple text-gruvbox-purple'
-              : 'border-transparent text-gruvbox-gray hover:text-gruvbox-fg'
-          }`}
-        >
-          <Layers className="w-3.5 h-3.5" />
-          Flashcards ({document.flashcards?.length || 0})
-        </button>
+        {isYt && (
+          <button
+            onClick={() => { setActiveTab('video'); setIsEditing(false); }}
+            className={`flex items-center gap-1.5 py-2.5 px-3.5 text-xs font-semibold border-b-2 transition-colors ${
+              activeTab === 'video'
+                ? 'border-gruvbox-orange text-gruvbox-orange'
+                : 'border-transparent text-gruvbox-gray hover:text-gruvbox-fg'
+            }`}
+          >
+            <YouTubeIcon className="w-3.5 h-3.5" />
+            Video & Chapters
+          </button>
+        )}
 
-        <button
-          onClick={() => setActiveTab('quiz')}
-          className={`flex items-center gap-1.5 py-2.5 px-3.5 text-xs font-semibold border-b-2 transition-colors ${
-            activeTab === 'quiz'
-              ? 'border-gruvbox-green text-gruvbox-green'
-              : 'border-transparent text-gruvbox-gray hover:text-gruvbox-fg'
-          }`}
-        >
-          <Award className="w-3.5 h-3.5" />
-          Practice Quiz ({document.quizQuestions?.length || 0})
-        </button>
+        {reviewer && reviewer.executiveSummary && (
+          <button
+            onClick={() => { setActiveTab('ai_summary'); setIsEditing(false); }}
+            className={`flex items-center gap-1.5 py-2.5 px-3.5 text-xs font-semibold border-b-2 transition-colors ${
+              activeTab === 'ai_summary'
+                ? 'border-gruvbox-purple text-gruvbox-purple'
+                : 'border-transparent text-gruvbox-gray hover:text-gruvbox-fg'
+            }`}
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            AI Reviewer
+          </button>
+        )}
 
-        <button
-          onClick={() => setActiveTab('source')}
-          className={`flex items-center gap-1.5 py-2.5 px-3.5 text-xs font-semibold border-b-2 transition-colors ${
-            activeTab === 'source'
-              ? 'border-gruvbox-orange text-gruvbox-orange'
-              : 'border-transparent text-gruvbox-gray hover:text-gruvbox-fg'
-          }`}
-        >
-          {isYt ? <YouTubeIcon className="w-3.5 h-3.5" /> : <FileText className="w-3.5 h-3.5" />}
-          {isYt ? 'Video & Transcripts' : 'Source Document'}
-        </button>
+        {flashcards.length > 0 && (
+          <button
+            onClick={() => { setActiveTab('flashcards'); setIsEditing(false); }}
+            className={`flex items-center gap-1.5 py-2.5 px-3.5 text-xs font-semibold border-b-2 transition-colors ${
+              activeTab === 'flashcards'
+                ? 'border-gruvbox-green text-gruvbox-green'
+                : 'border-transparent text-gruvbox-gray hover:text-gruvbox-fg'
+            }`}
+          >
+            <Layers className="w-3.5 h-3.5" />
+            Flashcards ({flashcards.length})
+          </button>
+        )}
+
+        {quizQuestions.length > 0 && (
+          <button
+            onClick={() => { setActiveTab('quiz'); setIsEditing(false); }}
+            className={`flex items-center gap-1.5 py-2.5 px-3.5 text-xs font-semibold border-b-2 transition-colors ${
+              activeTab === 'quiz'
+                ? 'border-gruvbox-yellow text-gruvbox-yellow'
+                : 'border-transparent text-gruvbox-gray hover:text-gruvbox-fg'
+            }`}
+          >
+            <Award className="w-3.5 h-3.5" />
+            Practice Quiz ({quizQuestions.length})
+          </button>
+        )}
       </div>
 
-      {/* Main Scrollable Content */}
+      {/* Main Workspace View */}
       <div className="flex-1 min-h-0 overflow-y-auto p-4 md:p-6">
         
-        {/* TAB 1: STUDY NOTES */}
-        {activeTab === 'reviewer' && (
-          <div className="max-w-3xl mx-auto space-y-6 pb-12">
+        {/* TAB 1: NOTE CONTENT (OBSIDIAN MARKDOWN EDITOR & READER) */}
+        {(activeTab === 'note' || isEditing) && (
+          <div className="max-w-4xl mx-auto space-y-4 pb-12">
             
-            {/* Executive Summary */}
-            {reviewer?.executiveSummary && (
-              <div className="glass-panel p-5 rounded-xl border-l-2 border-l-gruvbox-yellow">
-                <span className="text-[11px] font-bold text-gruvbox-yellow uppercase tracking-wider block mb-1.5">
-                  Summary
-                </span>
-                <MarkdownRenderer 
-                  content={reviewer.executiveSummary} 
-                  onWikilinkClick={onConceptClick} 
-                />
-              </div>
-            )}
-
-            {/* Figures Preview Strip if Available */}
-            {images.length > 0 && (
-              <div className="glass-panel p-4 rounded-xl border border-gruvbox-bg1">
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-[11px] font-bold text-gruvbox-aqua uppercase tracking-wider flex items-center gap-1.5">
-                    <ImageIcon className="w-3.5 h-3.5" /> Extracted Figures ({images.length})
-                  </span>
-                  <button
-                    onClick={() => setActiveTab('figures')}
-                    className="text-[10px] text-gruvbox-yellow hover:underline"
-                  >
-                    View All
-                  </button>
-                </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5">
-                  {images.slice(0, 4).map((img, i) => (
-                    <div 
-                      key={img.id || i}
-                      onClick={() => setActiveLightboxImg(img)}
-                      className="group relative aspect-video rounded-lg overflow-hidden border border-gruvbox-bg1 bg-gruvbox-bg cursor-pointer hover:border-gruvbox-aqua transition-colors"
-                    >
-                      <img src={img.dataUrl} alt={img.name} className="w-full h-full object-cover" />
-                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                        <ZoomIn className="w-4 h-4 text-gruvbox-fgLight" />
-                      </div>
-                      <div className="absolute bottom-0 inset-x-0 bg-black/70 px-1.5 py-0.5 text-[9px] text-gruvbox-fgDim truncate">
-                        {img.name}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Key Takeaways */}
-            {reviewer?.keyTakeaways && reviewer.keyTakeaways.length > 0 && (
-              <div>
-                <h3 className="text-xs font-bold text-gruvbox-gray uppercase tracking-wider mb-2.5">
-                  Key Takeaways
-                </h3>
-                <div className="space-y-2">
-                  {reviewer.keyTakeaways.map((takeaway, idx) => (
-                    <div 
-                      key={idx}
-                      className="glass-panel p-3 rounded-lg flex items-start gap-2.5 border border-gruvbox-bg1"
-                    >
-                      <span className="w-4 h-4 rounded bg-gruvbox-bg1 text-gruvbox-yellow text-[11px] font-bold flex items-center justify-center flex-shrink-0 mt-0.5">
-                        {idx + 1}
-                      </span>
-                      <p className="text-xs text-gruvbox-fg leading-relaxed">
-                        {takeaway}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Sections */}
-            {reviewer?.comprehensiveSections && reviewer.comprehensiveSections.length > 0 && (
+            {isEditing ? (
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-xs font-bold text-gruvbox-gray uppercase tracking-wider">
-                    Sections ({reviewer.comprehensiveSections.length})
-                  </h3>
+                  <span className="text-xs font-bold text-gruvbox-yellow uppercase tracking-wider">
+                    Editing Markdown Note
+                  </span>
+                  <span className="text-[11px] text-gruvbox-gray">
+                    Tip: Use [[Concept]] to create interactive graph nodes!
+                  </span>
                 </div>
-
-                {reviewer.comprehensiveSections.map((section, sIdx) => {
-                  const isCollapsed = expandedSections[sIdx] === false;
-
-                  return (
-                    <div 
-                      key={sIdx}
-                      className="glass-panel rounded-xl overflow-hidden border border-gruvbox-bg1"
-                    >
-                      <div 
-                        onClick={() => toggleSection(sIdx)}
-                        className="p-3.5 bg-gruvbox-bg/60 hover:bg-gruvbox-bg flex items-center justify-between cursor-pointer select-none"
-                      >
-                        <div className="flex items-center gap-2.5">
-                          <span className="w-5 h-5 rounded bg-gruvbox-bg1 text-gruvbox-aqua text-xs font-bold flex items-center justify-center">
-                            {sIdx + 1}
-                          </span>
-                          <h4 className="text-xs font-bold text-gruvbox-fgLight">
-                            {section.sectionTitle}
-                          </h4>
-                        </div>
-                        <div className="text-gruvbox-gray">
-                          {isCollapsed ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronUp className="w-3.5 h-3.5" />}
-                        </div>
-                      </div>
-
-                      {!isCollapsed && (
-                        <div className="p-4 space-y-3 border-t border-gruvbox-bg1">
-                          <MarkdownRenderer 
-                            content={section.detailedNotesMarkdown} 
-                            onWikilinkClick={onConceptClick} 
-                          />
-
-                          {section.keyTerms && section.keyTerms.length > 0 && (
-                            <div className="p-3 rounded-lg bg-gruvbox-bg1/30 border border-gruvbox-bg1 space-y-1.5">
-                              <span className="text-[10px] font-bold text-gruvbox-yellow uppercase tracking-wider block">
-                                Key Terms
-                              </span>
-                              <div className="space-y-1">
-                                {section.keyTerms.map((kt, ktIdx) => (
-                                  <div key={ktIdx} className="text-xs">
-                                    <strong className="text-gruvbox-yellow">{kt.term}:</strong>{' '}
-                                    <span className="text-gruvbox-fgDim">{kt.definition}</span>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-
-                          {section.formulasOrRules && section.formulasOrRules.length > 0 && (
-                            <div className="p-3 rounded-lg bg-gruvbox-bg1/30 border border-gruvbox-purple/20 space-y-1.5">
-                              <span className="text-[10px] font-bold text-gruvbox-purple uppercase tracking-wider block">
-                                Formulas / Rules
-                              </span>
-                              <div className="space-y-1.5">
-                                {section.formulasOrRules.map((f, fIdx) => (
-                                  <div key={fIdx} className="text-xs">
-                                    <div className="font-bold text-gruvbox-purple">{f.name}</div>
-                                    {f.formula && (
-                                      <div className="p-1.5 my-1 rounded bg-gruvbox-bgHard font-mono text-gruvbox-green border border-gruvbox-bg1 text-[11px]">
-                                        {f.formula}
-                                      </div>
-                                    )}
-                                    <p className="text-gruvbox-fgDim">{f.explanation}</p>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
+                <textarea
+                  value={editContent}
+                  onChange={(e) => setEditContent(e.target.value)}
+                  rows={22}
+                  className="w-full font-mono text-xs text-gruvbox-fg bg-gruvbox-bg border border-gruvbox-bg2 rounded-xl p-4 leading-relaxed focus:outline-none focus:border-gruvbox-yellow shadow-inner"
+                  placeholder="Write your markdown note here..."
+                />
+                <div className="flex items-center justify-end gap-2">
+                  <button
+                    onClick={() => setIsEditing(false)}
+                    className="px-3 py-1.5 rounded-lg bg-gruvbox-bg hover:bg-gruvbox-bg1 border border-gruvbox-bg1 text-xs text-gruvbox-gray"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSaveNote}
+                    disabled={isSaving}
+                    className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-gruvbox-green text-gruvbox-bgHard font-bold text-xs hover:bg-gruvbox-green/80"
+                  >
+                    {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                    <span>Save Note</span>
+                  </button>
+                </div>
               </div>
-            )}
-
-            {/* Concepts & Wikilinks */}
-            {reviewer?.entities && reviewer.entities.length > 0 && (
-              <div className="glass-panel p-4 rounded-xl border border-gruvbox-bg1">
-                <h3 className="text-xs font-bold text-gruvbox-aqua uppercase tracking-wider mb-2.5">
-                  Connected Concepts
-                </h3>
-                <div className="flex items-center gap-2 flex-wrap">
-                  {reviewer.entities.map((ent, idx) => (
+            ) : (
+              <div className="glass-panel p-6 rounded-xl border border-gruvbox-bg1 min-h-[400px]">
+                {document.rawText && document.rawText.trim().length > 0 ? (
+                  <MarkdownRenderer 
+                    content={document.rawText} 
+                    onWikilinkClick={onConceptClick} 
+                  />
+                ) : (
+                  <div className="text-center py-12 text-gruvbox-gray">
+                    <p className="text-xs">This note is currently empty.</p>
                     <button
-                      key={idx}
-                      onClick={() => onConceptClick && onConceptClick(ent.name || ent)}
-                      className="px-2 py-0.5 rounded bg-gruvbox-bg1 hover:bg-gruvbox-yellow/20 border border-gruvbox-yellow/30 text-gruvbox-yellow text-xs transition-colors"
-                      title={ent.description || 'View in Graph'}
+                      onClick={() => setIsEditing(true)}
+                      className="mt-3 px-3 py-1.5 rounded-lg bg-gruvbox-bg1 text-gruvbox-yellow text-xs font-bold"
                     >
-                      [[{ent.name || ent}]]
+                      Click here to start editing
                     </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Glossary */}
-            {reviewer?.glossary && reviewer.glossary.length > 0 && (
-              <div className="glass-panel p-4 rounded-xl border border-gruvbox-bg1">
-                <h3 className="text-xs font-bold text-gruvbox-gray uppercase tracking-wider mb-2.5">
-                  Glossary ({reviewer.glossary.length})
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
-                  {reviewer.glossary.map((g, gIdx) => (
-                    <div key={gIdx} className="p-2.5 rounded-lg bg-gruvbox-bg/50 border border-gruvbox-bg1">
-                      <strong className="text-xs text-gruvbox-yellow block">{g.term}</strong>
-                      <p className="text-[11px] text-gruvbox-fgDim mt-0.5 leading-relaxed">{g.definition}</p>
-                    </div>
-                  ))}
-                </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -474,7 +456,7 @@ ${(reviewer?.glossary || []).map(g => `- **${g.term}**: ${g.definition}`).join('
         )}
 
         {/* TAB 2: FIGURES & DIAGRAMS */}
-        {activeTab === 'figures' && (
+        {activeTab === 'figures' && !isEditing && (
           <div className="max-w-4xl mx-auto space-y-6 pb-12">
             <div>
               <h3 className="text-xs font-bold text-gruvbox-aqua uppercase tracking-wider mb-1">
@@ -506,14 +488,9 @@ ${(reviewer?.glossary || []).map(g => `- **${g.term}**: ${g.definition}`).join('
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-bold text-gruvbox-fgLight truncate">{img.name}</span>
                       <span className="text-[10px] text-gruvbox-gray flex-shrink-0">
-                        {(img.sizeBytes / 1024).toFixed(1)} KB
+                        {img.sizeBytes ? (img.sizeBytes / 1024).toFixed(1) + ' KB' : ''}
                       </span>
                     </div>
-                    {img.caption && img.caption !== img.name && (
-                      <p className="text-[10px] text-gruvbox-fgDim line-clamp-2 leading-relaxed">
-                        {img.caption}
-                      </p>
-                    )}
                   </div>
                 </div>
               ))}
@@ -521,82 +498,130 @@ ${(reviewer?.glossary || []).map(g => `- **${g.term}**: ${g.definition}`).join('
           </div>
         )}
 
-        {/* TAB 3: FLASHCARDS */}
-        {activeTab === 'flashcards' && (
-          <FlashcardsView
-            flashcards={document.flashcards || []}
-            docTitle={title}
-            onCardReviewed={onFlashcardReview}
-          />
-        )}
-
-        {/* TAB 4: QUIZ */}
-        {activeTab === 'quiz' && (
-          <QuizView
-            quizQuestions={document.quizQuestions || []}
-            docTitle={title}
-            onQuizCompleted={onQuizComplete}
-          />
-        )}
-
-        {/* TAB 5: SOURCE */}
-        {activeTab === 'source' && (
+        {/* TAB 3: VIDEO & CHAPTERS */}
+        {activeTab === 'video' && !isEditing && (
           <div className="max-w-3xl mx-auto space-y-4 pb-12">
-            {isYt ? (
-              <div className="space-y-4">
-                {document.sourceUrl && (
-                  <div className="aspect-video w-full rounded-xl overflow-hidden border border-gruvbox-bg1 bg-black">
-                    <iframe
-                      src={`https://www.youtube.com/embed/${document.sourceUrl.split('v=')[1]?.split('&')[0]}?autoplay=0&start=${currentYtTime}`}
-                      title={title}
-                      className="w-full h-full"
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                      allowFullScreen
-                    />
-                  </div>
-                )}
-
-                {chapters && chapters.length > 0 && (
-                  <div className="glass-panel p-4 rounded-xl border border-gruvbox-bg1">
-                    <h3 className="text-xs font-bold text-gruvbox-orange uppercase tracking-wider mb-3 flex items-center gap-1.5">
-                      <Play className="w-3.5 h-3.5" />
-                      Chapters
-                    </h3>
-                    <div className="space-y-1.5">
-                      {chapters.map((chap, cIdx) => (
-                        <div
-                          key={cIdx}
-                          onClick={() => setCurrentYtTime(chap.start || parseTimestampToSeconds(chap.timestamp))}
-                          className="p-2.5 rounded-lg bg-gruvbox-bg/50 hover:bg-gruvbox-bg border border-gruvbox-bg1 cursor-pointer transition-colors flex items-start gap-2.5 group"
-                        >
-                          <span className="px-1.5 py-0.5 rounded bg-gruvbox-orange/20 text-gruvbox-orange text-[11px] font-bold flex-shrink-0">
-                            {chap.timestamp}
-                          </span>
-                          <p className="text-xs text-gruvbox-fg leading-relaxed">
-                            {chap.text}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+            {sourceUrl && (
+              <div className="aspect-video w-full rounded-xl overflow-hidden border border-gruvbox-bg1 bg-black">
+                <iframe
+                  src={`https://www.youtube.com/embed/${sourceUrl.split('v=')[1]?.split('&')[0]}?autoplay=0&start=${currentYtTime}`}
+                  title={title}
+                  className="w-full h-full"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
               </div>
-            ) : (
-              <div className="glass-panel p-5 rounded-xl border border-gruvbox-bg1">
-                <h3 className="text-xs font-bold text-gruvbox-gray uppercase tracking-wider mb-3">
-                  Document Text ({document.rawText?.length || 0} characters)
+            )}
+
+            {chapters && chapters.length > 0 && (
+              <div className="glass-panel p-4 rounded-xl border border-gruvbox-bg1">
+                <h3 className="text-xs font-bold text-gruvbox-orange uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                  <Play className="w-3.5 h-3.5" />
+                  Video Timestamps & Chapters
                 </h3>
-                <pre className="text-xs text-gruvbox-fgDim whitespace-pre-wrap leading-relaxed max-h-[550px] overflow-y-auto p-3 rounded-lg bg-gruvbox-bgHard border border-gruvbox-bg1">
-                  {document.rawText}
-                </pre>
+                <div className="space-y-1.5">
+                  {chapters.map((chap, cIdx) => (
+                    <div
+                      key={cIdx}
+                      onClick={() => setCurrentYtTime(chap.start || parseTimestampToSeconds(chap.timestamp))}
+                      className="p-2.5 rounded-lg bg-gruvbox-bg/50 hover:bg-gruvbox-bg border border-gruvbox-bg1 cursor-pointer transition-colors flex items-start gap-2.5 group"
+                    >
+                      <span className="px-1.5 py-0.5 rounded bg-gruvbox-orange/20 text-gruvbox-orange text-[11px] font-bold flex-shrink-0">
+                        {chap.timestamp}
+                      </span>
+                      <p className="text-xs text-gruvbox-fg leading-relaxed">
+                        {chap.text}
+                      </p>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>
         )}
 
+        {/* TAB 4: AI REVIEWER (IF SEEDED OR GENERATED ON DEMAND) */}
+        {activeTab === 'ai_summary' && reviewer && !isEditing && (
+          <div className="max-w-3xl mx-auto space-y-6 pb-12">
+            
+            {reviewer.executiveSummary && (
+              <div className="glass-panel p-5 rounded-xl border-l-2 border-l-gruvbox-purple">
+                <span className="text-[11px] font-bold text-gruvbox-purple uppercase tracking-wider block mb-1.5">
+                  Executive Summary
+                </span>
+                <MarkdownRenderer 
+                  content={reviewer.executiveSummary} 
+                  onWikilinkClick={onConceptClick} 
+                />
+              </div>
+            )}
+
+            {reviewer.keyTakeaways && reviewer.keyTakeaways.length > 0 && (
+              <div>
+                <h3 className="text-xs font-bold text-gruvbox-gray uppercase tracking-wider mb-2.5">
+                  Key Takeaways
+                </h3>
+                <div className="space-y-2">
+                  {reviewer.keyTakeaways.map((takeaway, idx) => (
+                    <div 
+                      key={idx}
+                      className="glass-panel p-3 rounded-lg flex items-start gap-2.5 border border-gruvbox-bg1"
+                    >
+                      <span className="w-4 h-4 rounded bg-gruvbox-bg1 text-gruvbox-yellow text-[11px] font-bold flex items-center justify-center flex-shrink-0 mt-0.5">
+                        {idx + 1}
+                      </span>
+                      <p className="text-xs text-gruvbox-fg leading-relaxed">
+                        {takeaway}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {reviewer.comprehensiveSections && reviewer.comprehensiveSections.length > 0 && (
+              <div className="space-y-3">
+                <h3 className="text-xs font-bold text-gruvbox-gray uppercase tracking-wider">
+                  Structured Study Sections
+                </h3>
+                {reviewer.comprehensiveSections.map((section, sIdx) => (
+                  <div key={sIdx} className="glass-panel rounded-xl overflow-hidden border border-gruvbox-bg1 p-4 space-y-2">
+                    <h4 className="text-xs font-bold text-gruvbox-fgLight">
+                      {section.sectionTitle}
+                    </h4>
+                    <MarkdownRenderer 
+                      content={section.detailedNotesMarkdown} 
+                      onWikilinkClick={onConceptClick} 
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+
+          </div>
+        )}
+
+        {/* TAB 5: FLASHCARDS */}
+        {activeTab === 'flashcards' && !isEditing && (
+          <FlashcardsView
+            flashcards={flashcards}
+            docTitle={title}
+            onCardReviewed={onFlashcardReview}
+          />
+        )}
+
+        {/* TAB 6: QUIZ */}
+        {activeTab === 'quiz' && !isEditing && (
+          <QuizView
+            quizQuestions={quizQuestions}
+            docTitle={title}
+            onQuizCompleted={onQuizComplete}
+          />
+        )}
+
       </div>
 
-      {/* Lightbox Modal for Full-Resolution Image Inspection */}
+      {/* Lightbox Modal */}
       {activeLightboxImg && (
         <div 
           className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 select-none"
@@ -607,15 +632,10 @@ ${(reviewer?.glossary || []).map(g => `- **${g.term}**: ${g.definition}`).join('
             onClick={(e) => e.stopPropagation()}
           >
             <div className="p-3 px-4 border-b border-gruvbox-bg1 flex items-center justify-between bg-gruvbox-bg/60">
-              <div className="min-w-0">
-                <span className="text-xs font-bold text-gruvbox-fgLight truncate block">{activeLightboxImg.name}</span>
-                {activeLightboxImg.caption && (
-                  <p className="text-[11px] text-gruvbox-fgDim truncate mt-0.5">{activeLightboxImg.caption}</p>
-                )}
-              </div>
+              <span className="text-xs font-bold text-gruvbox-fgLight truncate">{activeLightboxImg.name}</span>
               <button
                 onClick={() => setActiveLightboxImg(null)}
-                className="p-1 rounded hover:bg-gruvbox-bg1 text-gruvbox-gray hover:text-gruvbox-fg ml-3 flex-shrink-0"
+                className="p-1 rounded hover:bg-gruvbox-bg1 text-gruvbox-gray hover:text-gruvbox-fg ml-3"
               >
                 <X className="w-4 h-4" />
               </button>

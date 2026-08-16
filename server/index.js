@@ -9,10 +9,11 @@ import config, { updateConfig } from './config.js';
 import { extractPdfText } from './services/pdfExtractor.js';
 import { extractYouTubeData } from './services/youtubeExtractor.js';
 import { generateDeepReviewerWithGemini } from './services/geminiService.js';
-import { generateHeuristicReviewer, extractKeywords } from './services/nlpEngine.js';
+import { generateHeuristicReviewer, extractKeywords, extractWikilinksAndTags } from './services/nlpEngine.js';
 import { chatWithVault } from './services/chatService.js';
 import { authMiddleware, authenticate, verifyToken, invalidateToken } from './services/authService.js';
 import * as vaultManager from './services/vaultManager.js';
+import { seedVaultDocument, summarizeVaultDocument } from './services/agentVault.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -102,12 +103,10 @@ app.post('/api/auth/logout', (req, res) => {
 });
 
 app.get('/api/auth/status', (req, res) => {
-  const authHeader = req.headers['authorization'];
-  if (authHeader && authHeader.startsWith('Bearer ')) {
-    const isValid = verifyToken(authHeader.slice(7).trim());
-    return res.json({ authenticated: isValid });
-  }
-  res.json({ authenticated: false });
+  res.json({
+    authenticated: true,
+    hasApiKey: Boolean(config.geminiApiKey)
+  });
 });
 
 // 1. Health & Config
@@ -128,8 +127,8 @@ app.get('/api/settings', (req, res) => {
     selectedModel: config.selectedModel,
     provider: config.provider,
     availableModels: [
-      { id: 'gemini-3.7-flash', name: 'Gemini 3.7 Flash (Smartest & Flagship)', recommended: true },
-      { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash (Ultra Fast)', recommended: false }
+      { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', recommended: true },
+      { id: 'gemini-2.5-flash-lite', name: 'Gemini 2.5 Flash Lite', recommended: false }
     ]
   });
 });
@@ -145,7 +144,7 @@ app.post('/api/settings', (req, res) => {
   });
 });
 
-// 2. Upload and Process PDF
+// 2. Upload and Process PDF (Direct Obsidian Extraction)
 app.post('/api/upload-pdf', upload.single('file'), async (req, res) => {
   try {
     if (!req.file) {
@@ -162,26 +161,19 @@ app.post('/api/upload-pdf', upload.single('file'), async (req, res) => {
       return res.status(400).json({ error: 'Could not extract readable text from PDF (it may be scanned/image-only).' });
     }
 
-    const reviewer = await processContentToReviewer({
-      title: originalName,
-      sourceType: 'pdf',
-      content: pdfData.rawText,
-      extraContext: `Page Count: ${pdfData.numPages}, Words: ${pdfData.wordCount}`
-    });
+    const meta = extractWikilinksAndTags(pdfData.rawText);
 
     const doc = await vaultManager.saveDocumentAsync({
-      title: reviewer.title || originalName,
+      title: originalName,
       type: 'pdf',
       sourceUrl: `/uploads/${req.file.filename}`,
       wordCount: pdfData.wordCount,
       rawText: pdfData.rawText,
       images: pdfData.images || [],
-      reviewer,
-      tags: reviewer.tags,
-      entities: reviewer.entities,
-      wikilinks: reviewer.wikilinks,
-      flashcards: reviewer.flashcards,
-      quizQuestions: reviewer.quizQuestions
+      tags: meta.tags,
+      entities: meta.entities,
+      wikilinks: meta.wikilinks,
+      reviewer: null
     });
 
     res.json({ success: true, document: doc });
@@ -191,7 +183,7 @@ app.post('/api/upload-pdf', upload.single('file'), async (req, res) => {
   }
 });
 
-// 2b. Direct Ingest of Parsed PDF Text & Figures (Serverless-Safe for large PDFs)
+// 2b. Direct Ingest of Parsed PDF Text & Figures (Serverless Direct Obsidian Vault)
 app.post('/api/ingest-pdf-text', async (req, res) => {
   try {
     const { title, rawText, numPages, wordCount, images = [] } = req.body;
@@ -201,28 +193,21 @@ app.post('/api/ingest-pdf-text', async (req, res) => {
     }
 
     const cleanTitle = title || 'Uploaded Document';
-    console.log(`[PDF Ingestion] Processing parsed text for "${cleanTitle}" (${wordCount || 0} words, ${images.length} images)...`);
+    console.log(`[PDF Ingestion] Saving raw document "${cleanTitle}" (${wordCount || 0} words, ${images.length} images)...`);
 
-    const reviewer = await processContentToReviewer({
-      title: cleanTitle,
-      sourceType: 'pdf',
-      content: rawText,
-      extraContext: `Page Count: ${numPages || 1}, Words: ${wordCount || 0}`
-    });
+    const meta = extractWikilinksAndTags(rawText);
 
     const doc = await vaultManager.saveDocumentAsync({
-      title: reviewer.title || cleanTitle,
+      title: cleanTitle,
       type: 'pdf',
       sourceUrl: '',
       wordCount: wordCount || rawText.split(/\s+/).filter(Boolean).length,
       rawText,
       images: images.slice(0, 15),
-      reviewer,
-      tags: reviewer.tags,
-      entities: reviewer.entities,
-      wikilinks: reviewer.wikilinks,
-      flashcards: reviewer.flashcards,
-      quizQuestions: reviewer.quizQuestions
+      tags: meta.tags,
+      entities: meta.entities,
+      wikilinks: meta.wikilinks,
+      reviewer: null
     });
 
     res.json({ success: true, document: doc });
@@ -242,18 +227,10 @@ app.post('/api/fetch-youtube', async (req, res) => {
 
     console.log(`[YouTube Ingestion] Processing URL: ${videoUrl}`);
     const ytData = await extractYouTubeData(videoUrl);
-
-    const extraContext = `Creator: ${ytData.author}\nDuration: ${ytData.durationFormatted}\nChapters:\n${ytData.chapters.map(c => `[${c.timestamp}] ${c.text.slice(0, 100)}...`).join('\n')}`;
-
-    const reviewer = await processContentToReviewer({
-      title: ytData.title,
-      sourceType: 'youtube',
-      content: ytData.rawText,
-      extraContext
-    });
+    const meta = extractWikilinksAndTags(ytData.rawText);
 
     const doc = await vaultManager.saveDocumentAsync({
-      title: reviewer.title || ytData.title,
+      title: ytData.title,
       type: 'youtube',
       sourceUrl: ytData.videoUrl,
       thumbnailUrl: ytData.thumbnailUrl,
@@ -262,12 +239,10 @@ app.post('/api/fetch-youtube', async (req, res) => {
       wordCount: ytData.wordCount,
       rawText: ytData.rawText,
       chapters: ytData.chapters,
-      reviewer,
-      tags: reviewer.tags,
-      entities: reviewer.entities,
-      wikilinks: reviewer.wikilinks,
-      flashcards: reviewer.flashcards,
-      quizQuestions: reviewer.quizQuestions
+      tags: meta.tags,
+      entities: meta.entities,
+      wikilinks: meta.wikilinks,
+      reviewer: null
     });
 
     res.json({ success: true, document: doc });
@@ -285,23 +260,18 @@ app.post('/api/create-note', async (req, res) => {
       return res.status(400).json({ error: 'Title and content are required.' });
     }
 
-    const reviewer = await processContentToReviewer({
-      title,
-      sourceType: 'note',
-      content
-    });
+    const meta = extractWikilinksAndTags(content);
+    const mergedTags = Array.from(new Set([...(tags || []), ...meta.tags]));
 
     const doc = await vaultManager.saveDocumentAsync({
       title,
       type: 'note',
       rawText: content,
       wordCount: content.split(/\s+/).filter(Boolean).length,
-      reviewer,
-      tags: Array.from(new Set([...(tags || []), ...(reviewer.tags || [])])),
-      entities: reviewer.entities,
-      wikilinks: reviewer.wikilinks,
-      flashcards: reviewer.flashcards,
-      quizQuestions: reviewer.quizQuestions
+      tags: mergedTags,
+      entities: meta.entities,
+      wikilinks: meta.wikilinks,
+      reviewer: null
     });
 
     res.json({ success: true, document: doc });
@@ -311,7 +281,7 @@ app.post('/api/create-note', async (req, res) => {
   }
 });
 
-// 5. Document List & Detail
+// 5. Document List, Detail, Update & Delete
 app.get('/api/documents', async (req, res) => {
   const docs = await vaultManager.getAllDocumentsAsync();
   res.json({ documents: docs });
@@ -323,15 +293,51 @@ app.get('/api/documents/:id', (req, res) => {
   res.json({ document: doc });
 });
 
-app.put('/api/documents/:id', (req, res) => {
-  const updated = vaultManager.updateDocument(req.params.id, req.body);
-  if (!updated) return res.status(404).json({ error: 'Document not found' });
+app.put('/api/documents/:id', async (req, res) => {
+  const existingDoc = vaultManager.getDocumentById(req.params.id);
+  if (!existingDoc) return res.status(404).json({ error: 'Document not found' });
+
+  const rawText = req.body.rawText !== undefined ? req.body.rawText : existingDoc.rawText;
+  const meta = extractWikilinksAndTags(rawText);
+
+  const updatedPayload = {
+    ...existingDoc,
+    ...req.body,
+    wordCount: rawText.split(/\s+/).filter(Boolean).length,
+    tags: Array.from(new Set([...(req.body.tags || existingDoc.tags || []), ...meta.tags])),
+    entities: Array.from(new Set([...(existingDoc.entities || []), ...meta.entities])),
+    wikilinks: Array.from(new Set([...(existingDoc.wikilinks || []), ...meta.wikilinks]))
+  };
+
+  const updated = await vaultManager.saveDocumentAsync(updatedPayload);
   res.json({ success: true, document: updated });
 });
 
 app.delete('/api/documents/:id', (req, res) => {
   vaultManager.deleteDocument(req.params.id);
   res.json({ success: true });
+});
+
+// On-demand AI Summarization for a Note
+app.post('/api/documents/:id/summarize', async (req, res) => {
+  try {
+    const updatedDoc = await summarizeVaultDocument(req.params.id);
+    res.json({ success: true, document: updatedDoc });
+  } catch (err) {
+    console.error('On-demand Summarize Error:', err);
+    res.status(500).json({ error: err.message || 'Failed to summarize document with AI' });
+  }
+});
+
+// Agent Direct Document Seeding Endpoint
+app.post('/api/agent/seed-document', async (req, res) => {
+  try {
+    const doc = await seedVaultDocument(req.body);
+    res.json({ success: true, document: doc });
+  } catch (err) {
+    console.error('Agent Seed Error:', err);
+    res.status(500).json({ error: err.message || 'Failed to seed document via agent' });
+  }
 });
 
 // Sync client persistent vault to server session

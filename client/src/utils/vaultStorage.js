@@ -125,9 +125,14 @@ export function buildClientKnowledgeGraph(docs = []) {
       }
     });
 
-    const wikilinks = doc.wikilinks || doc.reviewer?.wikilinks || [];
-    wikilinks.forEach(wl => {
-      const cleanWl = wl.replace(/[\[\]]/g, '').trim();
+    const textWikilinks = doc.rawText ? (doc.rawText.match(/\[\[(.*?)\]\]/g) || []).map(w => w.replace(/[\[\]]/g, '').trim()) : [];
+    const wikilinks = Array.from(new Set([
+      ...(doc.wikilinks || []).map(wl => wl.replace(/[\[\]]/g, '').trim()),
+      ...(doc.reviewer?.wikilinks || []).map(wl => wl.replace(/[\[\]]/g, '').trim()),
+      ...textWikilinks
+    ]));
+
+    wikilinks.forEach(cleanWl => {
       if (!cleanWl) return;
       const wlNodeId = `concept:${cleanWl.toLowerCase()}`;
       if (!nodesMap.has(wlNodeId)) {

@@ -101,6 +101,16 @@ export default function App() {
     setIsMobileSidebarOpen(false);
   };
 
+  const handleUpdateDoc = (updatedDoc) => {
+    setDocuments(prev => {
+      const updated = prev.map(d => d.id === updatedDoc.id ? updatedDoc : d);
+      saveVaultToLocal(updated);
+      setGraphData(buildClientKnowledgeGraph(updated));
+      return updated;
+    });
+    setTimeout(syncVaultWithServer, 200);
+  };
+
   const handleDeleteDoc = async (docId) => {
     try {
       setDocuments(prev => {
@@ -312,6 +322,7 @@ export default function App() {
             <ReviewerStudio
               document={selectedDocument}
               onDeleteDoc={handleDeleteDoc}
+              onUpdateDoc={handleUpdateDoc}
               onTagClick={handleTagClick}
               onConceptClick={handleConceptClick}
               onFlashcardReview={handleFlashcardReview}

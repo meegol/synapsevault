@@ -64,6 +64,48 @@ export function extractKeywords(text, maxKeywords = 12) {
   return sorted;
 }
 
+/**
+ * Extract wikilinks [[Concept]] and hashtags #tag directly from raw document text
+ * @param {string} text 
+ * @returns {{ wikilinks: string[], tags: string[], entities: Array<{name: string, type: string, description: string}> }}
+ */
+export function extractWikilinksAndTags(text) {
+  if (!text || typeof text !== 'string') return { wikilinks: [], tags: [], entities: [] };
+
+  // Match [[Concept Name]]
+  const wikilinkMatches = text.match(/\[\[(.*?)\]\]/g) || [];
+  const cleanWikilinks = Array.from(new Set(wikilinkMatches.map(w => w.replace(/^\[\[/, '').replace(/\]\]$/, '').trim()))).filter(Boolean);
+
+  // Match #tag
+  const tagMatches = text.match(/#([a-zA-Z0-9_-]+)/g) || [];
+  const cleanTags = Array.from(new Set(tagMatches.map(t => t.replace(/^#/, '').trim()))).filter(Boolean);
+
+  // Extract capitalized keywords as entity candidates if no explicit wikilinks exist
+  const keywords = extractKeywords(text, 6);
+
+  const entities = cleanWikilinks.map(name => ({
+    name,
+    type: 'Concept',
+    description: `Wikilink concept in document`
+  }));
+
+  if (entities.length === 0) {
+    keywords.forEach(k => {
+      entities.push({
+        name: k.term,
+        type: 'Concept',
+        description: `Key topic extracted from text`
+      });
+    });
+  }
+
+  return {
+    wikilinks: cleanWikilinks.map(w => `[[${w}]]`),
+    tags: cleanTags,
+    entities
+  };
+}
+
 import { sanitizeDocumentText } from '../utils/textSanitizer.js';
 
 /**

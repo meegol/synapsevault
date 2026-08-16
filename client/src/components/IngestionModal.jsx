@@ -56,7 +56,7 @@ export default function IngestionModal({
 
       let res;
       if (parsed && parsed.rawText && parsed.rawText.trim().length > 0) {
-        setStatusMessage(`Generating study notes & reviewer (${parsed.wordCount.toLocaleString()} words)...`);
+        setStatusMessage(`Saving document text to vault (${parsed.wordCount.toLocaleString()} words)...`);
         
         res = await apiFetch('/api/ingest-pdf-text', {
           method: 'POST',
@@ -71,7 +71,7 @@ export default function IngestionModal({
         });
       } else {
         // Fallback to direct upload
-        setStatusMessage('Uploading document for processing...');
+        setStatusMessage('Uploading document to vault...');
         const formData = new FormData();
         formData.append('file', pdfFile);
 
@@ -97,7 +97,7 @@ export default function IngestionModal({
         throw new Error(data.error);
       }
 
-      setStatusMessage('Indexing concepts and graph nodes...');
+      setStatusMessage('Indexing Obsidian graph nodes & links...');
       setTimeout(() => {
         setLoading(false);
         onIngestSuccess(data.document);
@@ -114,10 +114,10 @@ export default function IngestionModal({
     if (!youtubeUrl.trim()) return;
     setLoading(true);
     setError(null);
-    setStatusMessage('Fetching captions and timestamps...');
+    setStatusMessage('Fetching transcript and video metadata...');
 
     try {
-      setTimeout(() => setStatusMessage('Generating study notes and chapters...'), 1200);
+      setTimeout(() => setStatusMessage('Saving YouTube note to vault...'), 1000);
 
       const res = await apiFetch('/api/fetch-youtube', {
         method: 'POST',

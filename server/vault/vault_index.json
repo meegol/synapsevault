@@ -1,5 +1,64 @@
 [
   {
+    "id": "doc-1786891130723-4xwst",
+    "title": "ICT Institutional Trading Principles",
+    "type": "note",
+    "sourceUrl": "",
+    "thumbnailUrl": null,
+    "author": null,
+    "wordCount": 40,
+    "durationFormatted": null,
+    "rawText": "# ICT Institutional Trading Principles\n\nMarket structure relies on [[IPDA Architecture]] and [[Liquidity Delivery]].\n\n## Key Concepts\n- **[[Fair Value Gap]]**: A 3-candle imbalance in price delivery.\n- **[[Orderblock]]**: The last up-close candle before a down move.\n\n#trading #ict #market-structure",
+    "chapters": [],
+    "images": [],
+    "reviewer": null,
+    "tags": [
+      "trading",
+      "ict",
+      "market-structure"
+    ],
+    "entities": [
+      {
+        "name": "IPDA Architecture",
+        "type": "Concept",
+        "description": "Wikilink concept in document"
+      },
+      {
+        "name": "Liquidity Delivery",
+        "type": "Concept",
+        "description": "Wikilink concept in document"
+      },
+      {
+        "name": "Fair Value Gap",
+        "type": "Concept",
+        "description": "Wikilink concept in document"
+      },
+      {
+        "name": "Orderblock",
+        "type": "Concept",
+        "description": "Wikilink concept in document"
+      }
+    ],
+    "wikilinks": [
+      "[[IPDA Architecture]]",
+      "[[Liquidity Delivery]]",
+      "[[Fair Value Gap]]",
+      "[[Orderblock]]"
+    ],
+    "flashcards": [],
+    "quizQuestions": [],
+    "flashcardStats": {
+      "totalReviews": 0,
+      "mastered": 0
+    },
+    "quizStats": {
+      "attempts": 0,
+      "bestScore": 0
+    },
+    "createdAt": "2026-08-16T14:38:50.723Z",
+    "updatedAt": "2026-08-16T14:38:50.723Z"
+  },
+  {
     "id": "doc-1786824640142-iku0g",
     "title": "Market Efficiency Paradigm: IPDA Architecture & Algorithmic Cycle",
     "type": "pdf",
