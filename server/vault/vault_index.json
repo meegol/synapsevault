@@ -1,5 +1,65 @@
 [
   {
+    "id": "doc-ict-2024-mentorship-master",
+    "title": "ICT 2024 Mentorship Master Notes (Lectures 1-21)",
+    "type": "pdf",
+    "sourceUrl": "",
+    "thumbnailUrl": null,
+    "author": "GatieTrades / @TheInnerCircleTrader",
+    "wordCount": 1650,
+    "durationFormatted": null,
+    "rawText": "# ICT 2024 Mentorship Master Notes (Lectures 1-21)\n*Lectures by @TheInnerCircleTrader (ICT) — Notes by GatieTrades*\n\n---\n\n## 📌 Executive Summary & Key Algorithmic Reference Points\n\nThis document captures the complete 21-lecture **ICT 2024 Mentorship** curriculum compiled by GatieTrades. The framework covers the mechanics of the Interbank Price Delivery Algorithm (IPDA), market structure, time-and-price theory, and precision execution rules.\n\n### Core Reference Levels:\n- **NDOG (New Day Opening Gap)**: The price gap between the 16:59 EST settlement close and the 18:00 EST opening price of the next trading session. Has an algorithmic lifespan of **5 trading days**. Functions as a high-probability [[Draw on Liquidity]].\n- **NWOG (New Week Opening Gap)**: The price gap between Friday's 16:59 EST close and Sunday's 18:00 EST opening price. Has a lifespan of **5 trading weeks**.\n- **Consequent Encroachment (CE)**: The exact 50% midpoint of any gap, wick, NDOG/NWOG, or [[Fair Value Gap]].\n- **Opening Range Gap (ORG)**: The opening price range between 9:30 AM and 10:00 AM EST. Quadrants (25%, 50%, 75%) provide key algorithmic anchor levels.\n- **Draw on Liquidity (DOL)**: Where the market algorithm is drawn to reprice (e.g. relative equal highs/lows, NDOG/NWOG clusters, or unmitigated inefficiencies).\n\n---\n\n## 📖 Comprehensive Lecture-by-Lecture Breakdown\n\n### Lecture #1 (August 5, 2024) — Foundations of the Algorithm & Draw on Liquidity\n- **The Algorithm**: Price delivery is governed by **time first**, then price. Every move is coded by the algorithm. At **8:30 AM EST**, the algorithm spools toward liquidity or inefficiencies (or both).\n- **Draw on Liquidity (DOL)**:\n  - Focus on the 1-minute, 5-minute, and 15-minute timeframes.\n  - Scan for areas of **smoothness** (Relative Equal Highs/Lows) vs **roughness**.\n  - Market algorithm seeks smoothness at the top/bottom to run stop loss orders resting beyond those levels.\n- **Manual Intervention**: News events such as [[CPI]], [[FOMC]], and [[NFP]] represent non-tradeable manual intervention. Do not attempt to trade during these releases.\n- **PD Arrays**: Introduction to [[Orderblock]] (Change in State of Delivery) and [[Breaker Block]].\n\n---\n\n### Lecture #2 (August 6, 2024) — Price Delivery Continuum & Time Framework\n- **Price Delivery Continuum**: Use the 15-second chart to look for entries under the 1m timeframe for extreme precision and minimal risk.\n- **Time Framework**:\n  - Mark **7:00 AM EST** with a vertical line (ignore London session noise before 7:00 AM).\n  - Key 30-minute observation windows: **7:00 - 7:30 AM**, **8:00 - 8:30 AM**, and **9:00 - 9:30 AM**.\n  - Expect manipulation (run on stops) in one direction, followed by strong [[Displacement]] back into the range.\n- **Inversion FVG (IFVG)**: Look for an [[Inversion Fair Value Gap]] overlapping with a [[Breaker Block]]. Stop loss is set at the breaker high + 2 points.\n\n---\n\n### Lecture #3 (August 7, 2024) — NDOG, NWOG & Consequent Encroachment\n- **[[NDOG]] (New Day Opening Gap)**: 16:59 to 18:00 EST gap (5-day lifespan).\n- **[[NWOG]] (New Week Opening Gap)**: Friday 16:59 to Sunday 18:00 EST gap (5-week lifespan).\n- **Consequent Encroachment**: The 50% midpoint of gaps, volume imbalances, NDOG/NWOG, and wicks.\n- **Economic Calendar & Timing**: If there is medium/high impact news absent in the NYAM session (8:30 AM), look to trade the afternoon session starting at **1:30 PM EST**.\n\n---\n\n### Lecture #4 (August 8, 2024) — News Volatility & Determining DOL\n- **News Timing**: At 8:30 AM news releases, wait for data release prior to trading. News injects aggressive volatility.\n- **Determining DOL**: Look at clusters of NDOG/NWOG levels. Direction is favored toward smooth liquidity targets and away from rough/jagged price action.\n\n---\n\n### Lecture #5 (August 9, 2024) — Asian Session & Standard Deviation Projections\n- **Asian Session Window**: 7:00 PM to 9:00 PM EST. Build draw on liquidity around Asian highs/lows and NDOG levels.\n- **Standard Deviation (STDV) Projections**: Measure the 0-1 impulse leg. Multiply by 2 for expansion targets. The **-1 STDEV** level represents the measured move for low-hanging fruit profit targets.\n\n---\n\n### Lecture #6 (August 12, 2024) — Pre-Market Price Review & Partials Protocol\n- **No-News Days**: Yield more opportunities for mistakes and errors.\n- **Trade Management Rules**:\n  - Accept that you can be wrong and minimize risk.\n  - Do not swing for big home runs; take profit systematically.\n  - **Partials Pay**: Scaling out secures gains and removes psychological anxiety.\n\n---\n\n### Lecture #7 (August 13, 2024) — Silver Bullet & Institutional Order Flow Entry Drill (IOFED)\n- **Silver Bullet Window**: **10:00 AM - 11:00 AM EST**. The best setups form in this window following high-impact 8:30 AM news releases (NFP, PPI, CPI, PMI).\n- **Institutional Order Flow Entry Drill (IOFED)**: Enter on the low of a BISI (Buyside Imbalance Sellside Efficiency) or high of a SIBI (Sellside Imbalance Buyside Efficiency) when higher timeframe (HTF) context and time align.\n\n---\n\n### Lecture #8 (August 14, 2024) — Wicks as Gaps, Market Maker Models & Turtle Soup\n- **Using Wicks as a Gap**: Long news wicks act like FVGs. Watch price reaction at the 50% CE level of the wick.\n- **Market Maker Buy/Sell Model**:\n  - Buyside Curve -> [[Smart Money Reversal]] (SMR) -> Sellside Curve.\n  - Entry confluences occur when PD arrays from the buyside curve overlap with new PD arrays on the sellside curve.\n- **[[Turtle Soup]]**: Selling above an old high or buying below an old low when market narrative supports a reversal.\n\n---\n\n### Lecture #9 (August 15, 2024) — Signatures of Price Delivery & Inverting FVGs\n- **Signatures of Intent**: Key signature is inverting the [[Fair Value Gap]] used to take out buy-stops (Change in State of Delivery). If price fails to displace and respects the ORG High, stay patient and wait for confirmation.\n\n---\n\n### Lecture #10 (August 16, 2024) — Opening Range Gap Quadrants & Target Thresholds\n- **ORG Quadrants**: Divide the 9:30 - 10:00 AM opening range into 4 quarters.\n- **Minimum Handle Thresholds**:\n  - ES: 5 handles minimum off NDOG.\n  - NQ: 15 to 20 handles minimum off NDOG.\n- **Framing a Trade**: Look for Rejection of NDOG, IFVG, SIBI, OB, and news wick confluences.\n\n---\n\n### Lecture #11 (August 19, 2024) — Reclaimed Fair Value Gaps & TGIF Model\n- **Reclaimed FVG (Re-Claimed BISI/SIBI)**: Note the candle that leaves the FVG and the candle that re-touches the reclaimed FVG to rally aggressively.\n- **20% TGIF Rule**: Note choppiness after reaching 20% TGIF targets.\n\n---\n\n### Lecture #12 (August 19, 2024) — OLHC / OHLC Daily Bar Mechanics\n- **Bullish OLHC**: Open, Low, High, Close daily bar delivery. Scan intraday charts for the low of the day forming during the morning window.\n- **Bearish OHLC**: Open, High, Low, Close daily bar delivery.\n\n---\n\n### Lecture #13 (August 20, 2024) — Running Down Equity & Partials Protocol\n- **Running Down Equity**: Taking partials at short-term broken highs while leaving the stop loss in place.\n- **Volume Imbalance Partials**: Take partials at the 50% level of daily volume imbalances.\n\n---\n\n### Lecture #14 (August 22, 2024) — Rejection Blocks & Jackson Hole Event Rules\n- **[[Rejection Block]]**: A reversal pattern forming at a swing high/low. Defined by the highest body (open or close) at the swing high. Price should NOT tap beyond the rejection block if a CISD/OB is active.\n- **Jackson Hole Symposium**: 3-day annual news event characterized by heavy overlapping, choppy ranges, and deep retracements. Keep trade parameters tight and take partials quickly.\n\n---\n\n### Lecture #15 (August 23, 2024) — RTH Opening Range Gap & NY Session Mechanics\n- **Opening Range High/Low (9:30 - 10:00 AM)**: Key reference levels that the algorithm WILL refer to during the NY session.\n\n---\n\n### Lecture #16 (August 24, 2024) — Premium Array Confluences & Powell Speeches\n- Evaluate Daily Volume Imbalances, Mean Threshold of [[Orderblock]], Daily Rejection Block, and Premium Wicks prior to major Fed speeches.\n\n---\n\n### Lecture #17 (August 26, 2024) — Event Horizon PD Array & Immediate Rebalance\n- **Event Horizon**: Range calculated from the high of the NDOG below to the low of the NDOG above. Mark quarters (25%, 50%, 75%).\n- **Immediate Rebalance**: Rapid price action filling a gap instantly within 1-2 candles, signaling high institutional urgency.\n\n---\n\n### Lecture #18 (August 27, 2024) — The Mohawk Pattern & Trade Execution\n- **Mohawk Pattern**: Price wicks \"outside the lines\" of a level while body closures stay strictly within limits. Validates the setup despite wick spikes.\n\n---\n\n### Lecture #19 (August 28, 2024) — PDH & PDL Algorithmic Reference Points\n- **PDH (Previous Day High)** & **PDL (Previous Day Low)**: Core algorithmic anchor points that remain valid for drawing on liquidity and turtle soups even after being breached.\n\n---\n\n### Lecture #20 (August 29, 2024) — Targeting Old Daily Lows & IOFED\n- Execution breakdown targeting old daily lows using IOFED entries and partial scale-outs.\n\n---\n\n### Lecture #21 (August 30, 2024) — Holiday Weekend Trading & Deep Premium Rules\n- Avoid heavy position sizing on Fridays before holiday weekends. Respect old PDH/PDL reference points.\n\n---\n\n#ict #trading #liquidity #ndog #nwog #fvg #orderblock #breaker-block #turtle-soup #market-maker-model #discipline #risk-management",
+    "chapters": [],
+    "images": [],
+    "reviewer": null,
+    "tags": [
+      "ict",
+      "trading",
+      "liquidity",
+      "ndog",
+      "nwog",
+      "fvg",
+      "orderblock",
+      "breaker-block",
+      "turtle-soup",
+      "market-maker-model",
+      "discipline",
+      "risk-management"
+    ],
+    "entities": [
+      { "name": "Draw on Liquidity", "type": "Concept", "description": "Wikilink concept in document" },
+      { "name": "Fair Value Gap", "type": "Concept", "description": "Wikilink concept in document" },
+      { "name": "NDOG", "type": "Concept", "description": "Wikilink concept in document" },
+      { "name": "NWOG", "type": "Concept", "description": "Wikilink concept in document" },
+      { "name": "Orderblock", "type": "Concept", "description": "Wikilink concept in document" },
+      { "name": "Breaker Block", "type": "Concept", "description": "Wikilink concept in document" },
+      { "name": "Displacement", "type": "Concept", "description": "Wikilink concept in document" },
+      { "name": "Inversion Fair Value Gap", "type": "Concept", "description": "Wikilink concept in document" },
+      { "name": "Smart Money Reversal", "type": "Concept", "description": "Wikilink concept in document" },
+      { "name": "Turtle Soup", "type": "Concept", "description": "Wikilink concept in document" },
+      { "name": "Rejection Block", "type": "Concept", "description": "Wikilink concept in document" }
+    ],
+    "wikilinks": [
+      "[[Draw on Liquidity]]",
+      "[[Fair Value Gap]]",
+      "[[NDOG]]",
+      "[[NWOG]]",
+      "[[Orderblock]]",
+      "[[Breaker Block]]",
+      "[[Displacement]]",
+      "[[Inversion Fair Value Gap]]",
+      "[[Smart Money Reversal]]",
+      "[[Turtle Soup]]",
+      "[[Rejection Block]]"
+    ],
+    "flashcards": [],
+    "quizQuestions": [],
+    "flashcardStats": { "totalReviews": 0, "mastered": 0 },
+    "quizStats": { "attempts": 0, "bestScore": 0 },
+    "createdAt": "2026-08-16T14:50:00.000Z",
+    "updatedAt": "2026-08-16T14:50:00.000Z"
+  },
+  {
     "id": "doc-1786891130723-4xwst",
     "title": "ICT Institutional Trading Principles",
     "type": "note",
@@ -70,189 +130,7 @@
     "rawText": "\n# Months 1 & 2: Market Efficiency Paradigm, Liquidity, & Risk Frameworks\n### 1. Elements of a Trade Setup & IPDA Architecture\n- **Algorithmic Cycle of Price Delivery**:\n1. **Consolidation**: Price oscillates within a defined range around an equilibrium price point (50% level).\n2. **Expansion**: Sudden, explosive displacement away from equilibrium. Indicates the Market Maker repricing intent.\n3. **Retracement**: Order flow moves back inside the newly created price range to rebalance inefficiently delivered price.\n4. **Reversal**: Price breaches key liquidity pools (old highs/lows) and aggressively moves in the opposite direction.\n    ",
     "chapters": [],
     "images": [],
-    "reviewer": {
-      "title": "Market Efficiency Paradigm: IPDA Architecture & Algorithmic Cycle",
-      "executiveSummary": "The provided source material outlines the foundational components of the Interbank Price Delivery Algorithm (IPDA) architecture, specifically detailing the four core phases of the Algorithmic Cycle of Price Delivery: Consolidation, Expansion, Retracement, and Reversal.\n\nThis framework conceptualizes market price movements as an engineered, algorithmic sequence driven by market makers rather than random fluctuations. The model establishes how price oscillates around an equilibrium baseline, rapidly reprices through explosive expansion, rebalances inefficiency via retracement, and targets external liquidity pools prior to reversing direction.",
-      "keyTakeaways": [
-        "Market price moves through a four-stage algorithmic delivery cycle: Consolidation, Expansion, Retracement, and Reversal.",
-        "Consolidation centers strictly on an equilibrium price point defined as the 50% level of the established range.",
-        "Expansion represents institutional displacement and directional intent to reprice the market.",
-        "Retracement serves to rebalance inefficiently delivered price action within the newly expanded range.",
-        "Reversal occurs following the breach of major liquidity pools (old highs and lows), prompting aggressive movement in the opposing direction."
-      ],
-      "comprehensiveSections": [
-        {
-          "sectionTitle": "Elements of a Trade Setup & IPDA Architecture",
-          "detailedNotesMarkdown": "### IPDA Architecture & Algorithmic Price Cycle\n\nThe Interbank Price Delivery Algorithm (IPDA) operates in a continuous four-stage cycle:\n\n1. **Consolidation**:\n   - Characterized by range-bound price action.\n   - Price oscillates symmetrically around an equilibrium point ($50\\%$ of the range).\n   - Accumulates orders and establishes boundaries for future liquidity pools.\n\n2. **Expansion**:\n   - Features sudden, explosive displacement.\n   - Breaks outside the consolidation boundary.\n   - Signals immediate institutional and market maker repricing intent.\n\n3. **Retracement**:\n   - Order flow counter-trend movement back inside the newly created price range.\n   - Primary function is to rebalance price inefficiencies created during the rapid expansion phase.\n\n4. **Reversal**:\n   - Occurs after price sweeps or breaches key liquidity pools (previous significant highs or lows).\n   - Characterized by aggressive, high-momentum movement in the opposite direction.",
-          "keyTerms": [
-            {
-              "term": "Consolidation",
-              "definition": "A state where price oscillates within a defined range around a 50% equilibrium level."
-            },
-            {
-              "term": "Expansion",
-              "definition": "A sudden, explosive displacement away from equilibrium indicating market maker repricing intent."
-            },
-            {
-              "term": "Retracement",
-              "definition": "Order flow moving back inside a newly formed range to rebalance inefficiently delivered price."
-            },
-            {
-              "term": "Reversal",
-              "definition": "An aggressive shift in price direction triggered after breaching key liquidity pools (old highs or lows)."
-            }
-          ],
-          "formulasOrRules": [
-            {
-              "name": "Equilibrium Formula",
-              "formula": "\\text{Equilibrium} = \\frac{\\text{Range High} + \\text{Range Low}}{2} = 50\\% \\text{ Level}",
-              "explanation": "Calculates the central balance point around which consolidation occurs."
-            },
-            {
-              "name": "Algorithmic Delivery Sequence",
-              "formula": "\\text{Consolidation} \\rightarrow \\text{Expansion} \\rightarrow \\text{Retracement} \\rightarrow \\text{Reversal / Expansion}",
-              "explanation": "The chronological progression of institutional price delivery stages."
-            }
-          ]
-        }
-      ],
-      "glossary": [
-        {
-          "term": "IPDA",
-          "definition": "Interbank Price Delivery Algorithm; the systematic engine governing institutional price action.",
-          "category": "Market Structure"
-        },
-        {
-          "term": "Equilibrium",
-          "definition": "The exact 50% midpoint of a defined trading range.",
-          "category": "Price Action"
-        },
-        {
-          "term": "Displacement",
-          "definition": "Rapid, unidirectional price expansion demonstrating clear institutional intent.",
-          "category": "Execution"
-        },
-        {
-          "term": "Liquidity Pool",
-          "definition": "Concentrated zones of resting orders, typically situated above old highs or below old lows.",
-          "category": "Liquidity"
-        }
-      ],
-      "tags": [
-        "IPDA",
-        "MarketEfficiency",
-        "PriceAction",
-        "AlgorithmicDelivery",
-        "Liquidity"
-      ],
-      "entities": [
-        {
-          "name": "IPDA Architecture",
-          "type": "Concept",
-          "description": "Framework explaining algorithmic price delivery mechanisms.",
-          "relatedTo": [
-            "Algorithmic Cycle of Price Delivery",
-            "Market Maker"
-          ]
-        },
-        {
-          "name": "Algorithmic Cycle of Price Delivery",
-          "type": "Concept",
-          "description": "The four-phase cycle comprising consolidation, expansion, retracement, and reversal.",
-          "relatedTo": [
-            "IPDA Architecture",
-            "Liquidity Pools"
-          ]
-        }
-      ],
-      "wikilinks": [
-        "[[IPDA Architecture]]",
-        "[[Algorithmic Cycle of Price Delivery]]",
-        "[[Consolidation]]",
-        "[[Expansion]]",
-        "[[Retracement]]",
-        "[[Reversal]]",
-        "[[Liquidity Pools]]"
-      ],
-      "flashcards": [
-        {
-          "question": "What are the four stages of the Algorithmic Cycle of Price Delivery in order?",
-          "answer": "1. Consolidation\n2. Expansion\n3. Retracement\n4. Reversal",
-          "category": "IPDA Architecture",
-          "difficulty": "easy"
-        },
-        {
-          "question": "What is the primary characteristic of the Consolidation phase in the price cycle?",
-          "answer": "Price oscillates within a defined range around an equilibrium price point (the 50% level).",
-          "category": "Price Action",
-          "difficulty": "medium"
-        },
-        {
-          "question": "What does a sudden, explosive Expansion phase signify regarding market maker activity?",
-          "answer": "It signifies clear displacement and intentional repricing by the Market Maker away from equilibrium.",
-          "category": "Price Action",
-          "difficulty": "medium"
-        },
-        {
-          "question": "What functional role does Retracement play in the IPDA cycle?",
-          "answer": "It moves price back into the newly created range to rebalance inefficiently delivered price action.",
-          "category": "Market Mechanics",
-          "difficulty": "hard"
-        },
-        {
-          "question": "What market event typically triggers an aggressive Reversal phase?",
-          "answer": "The breaching of key liquidity pools located at previous significant highs or lows.",
-          "category": "Liquidity",
-          "difficulty": "hard"
-        }
-      ],
-      "quizQuestions": [
-        {
-          "question": "Around which reference level does price oscillation occur during Consolidation?",
-          "options": [
-            "The 50% equilibrium level",
-            "The 78.6% retracement level",
-            "The previous daily high",
-            "The volume-weighted average price (VWAP)"
-          ],
-          "correctIndex": 0,
-          "explanation": "Consolidation is explicitly defined as price oscillating within a defined range around an equilibrium price point (50% level)."
-        },
-        {
-          "question": "Which phase is characterized by sudden, explosive displacement away from equilibrium?",
-          "options": [
-            "Retracement",
-            "Reversal",
-            "Expansion",
-            "Accumulation"
-          ],
-          "correctIndex": 2,
-          "explanation": "Expansion is defined as sudden, explosive displacement away from equilibrium that indicates Market Maker repricing intent."
-        },
-        {
-          "question": "What is the primary institutional purpose of a Retracement?",
-          "options": [
-            "To breach key liquidity pools",
-            "To rebalance inefficiently delivered price action",
-            "To establish a new long-term equilibrium",
-            "To initiate a complete trend reversal"
-          ],
-          "correctIndex": 1,
-          "explanation": "Retracement occurs when order flow moves back inside the newly created price range specifically to rebalance price that was inefficiently delivered."
-        },
-        {
-          "question": "Where are key liquidity pools primarily located according to the IPDA delivery model?",
-          "options": [
-            "At the 50% equilibrium price point",
-            "Inside newly created retracement gaps",
-            "At old highs and old lows",
-            "Exclusively during the expansion phase"
-          ],
-          "correctIndex": 2,
-          "explanation": "Key liquidity pools reside at old highs and old lows; breaching these zones triggers the aggressive reversal phase."
-        }
-      ]
-    },
+    "reviewer": null,
     "tags": [
       "IPDA",
       "MarketEfficiency",
@@ -289,84 +167,8 @@
       "[[Reversal]]",
       "[[Liquidity Pools]]"
     ],
-    "flashcards": [
-      {
-        "question": "What are the four stages of the Algorithmic Cycle of Price Delivery in order?",
-        "answer": "1. Consolidation\n2. Expansion\n3. Retracement\n4. Reversal",
-        "category": "IPDA Architecture",
-        "difficulty": "easy"
-      },
-      {
-        "question": "What is the primary characteristic of the Consolidation phase in the price cycle?",
-        "answer": "Price oscillates within a defined range around an equilibrium price point (the 50% level).",
-        "category": "Price Action",
-        "difficulty": "medium"
-      },
-      {
-        "question": "What does a sudden, explosive Expansion phase signify regarding market maker activity?",
-        "answer": "It signifies clear displacement and intentional repricing by the Market Maker away from equilibrium.",
-        "category": "Price Action",
-        "difficulty": "medium"
-      },
-      {
-        "question": "What functional role does Retracement play in the IPDA cycle?",
-        "answer": "It moves price back into the newly created range to rebalance inefficiently delivered price action.",
-        "category": "Market Mechanics",
-        "difficulty": "hard"
-      },
-      {
-        "question": "What market event typically triggers an aggressive Reversal phase?",
-        "answer": "The breaching of key liquidity pools located at previous significant highs or lows.",
-        "category": "Liquidity",
-        "difficulty": "hard"
-      }
-    ],
-    "quizQuestions": [
-      {
-        "question": "Around which reference level does price oscillation occur during Consolidation?",
-        "options": [
-          "The 50% equilibrium level",
-          "The 78.6% retracement level",
-          "The previous daily high",
-          "The volume-weighted average price (VWAP)"
-        ],
-        "correctIndex": 0,
-        "explanation": "Consolidation is explicitly defined as price oscillating within a defined range around an equilibrium price point (50% level)."
-      },
-      {
-        "question": "Which phase is characterized by sudden, explosive displacement away from equilibrium?",
-        "options": [
-          "Retracement",
-          "Reversal",
-          "Expansion",
-          "Accumulation"
-        ],
-        "correctIndex": 2,
-        "explanation": "Expansion is defined as sudden, explosive displacement away from equilibrium that indicates Market Maker repricing intent."
-      },
-      {
-        "question": "What is the primary institutional purpose of a Retracement?",
-        "options": [
-          "To breach key liquidity pools",
-          "To rebalance inefficiently delivered price action",
-          "To establish a new long-term equilibrium",
-          "To initiate a complete trend reversal"
-        ],
-        "correctIndex": 1,
-        "explanation": "Retracement occurs when order flow moves back inside the newly created price range specifically to rebalance price that was inefficiently delivered."
-      },
-      {
-        "question": "Where are key liquidity pools primarily located according to the IPDA delivery model?",
-        "options": [
-          "At the 50% equilibrium price point",
-          "Inside newly created retracement gaps",
-          "At old highs and old lows",
-          "Exclusively during the expansion phase"
-        ],
-        "correctIndex": 2,
-        "explanation": "Key liquidity pools reside at old highs and old lows; breaching these zones triggers the aggressive reversal phase."
-      }
-    ],
+    "flashcards": [],
+    "quizQuestions": [],
     "flashcardStats": {
       "totalReviews": 0,
       "mastered": 0
