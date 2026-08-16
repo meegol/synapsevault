@@ -47,14 +47,14 @@ export default function App() {
         const data = await res.json();
         if (data.authenticated) {
           setIsAuthenticated(true);
-          syncVaultWithServer();
+          fetchVaultFromServer();
         } else {
           clearAuthToken();
           setIsAuthenticated(false);
         }
       } catch (e) {
         setIsAuthenticated(true);
-        syncVaultWithServer();
+        fetchVaultFromServer();
       }
     };
 
@@ -66,25 +66,29 @@ export default function App() {
     return () => window.removeEventListener('vault:lock', handleLockEvent);
   }, []);
 
-  // Sync local persistent documents to server lambda session
-  const syncVaultWithServer = async () => {
-    const localDocs = loadVaultFromLocal();
-    if (localDocs.length > 0) {
-      try {
-        await apiFetch('/api/sync-vault', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ documents: localDocs })
-        });
-      } catch (e) {
-        // Safe offline / background sync
+  // Fetch fresh vault documents from server database
+  const fetchVaultFromServer = async () => {
+    try {
+      const res = await apiFetch('/api/documents');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.documents && Array.isArray(data.documents) && data.documents.length > 0) {
+          setDocuments(data.documents);
+          saveVaultToLocal(data.documents);
+          setGraphData(buildClientKnowledgeGraph(data.documents));
+          if (!selectedDocId || !data.documents.some(d => d.id === selectedDocId)) {
+            setSelectedDocId(data.documents[0].id);
+          }
+        }
       }
+    } catch (err) {
+      console.warn('Failed to fetch vault from server database:', err);
     }
   };
 
   const handleUnlock = (token) => {
     setIsAuthenticated(true);
-    syncVaultWithServer();
+    fetchVaultFromServer();
   };
 
   const handleLockVault = async () => {
